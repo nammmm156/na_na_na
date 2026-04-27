@@ -38,6 +38,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/products/statistics").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll() // publicly view products
                 .anyRequest().authenticated() // force login for everything else (buying, creating products etc.)
             )

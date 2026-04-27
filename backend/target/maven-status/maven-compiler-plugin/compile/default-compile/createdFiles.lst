@@ -10,6 +10,7 @@ com\oop\ecommerce\security\CustomUserDetailsService.class
 com\oop\ecommerce\dto\AuthRequest.class
 com\oop\ecommerce\model\User.class
 com\oop\ecommerce\controller\AuthController.class
+com\oop\ecommerce\dto\ProductStatisticsDto.class
 com\oop\ecommerce\service\AuthService.class
 com\oop\ecommerce\dto\RegisterRequest.class
 com\oop\ecommerce\model\Product.class

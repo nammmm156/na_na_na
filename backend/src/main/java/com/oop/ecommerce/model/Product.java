@@ -25,4 +25,7 @@ public class Product {
     private Integer stockQuantity;
     private String category;
     private String imageUrl;
+    
+    // Initialize soldQuantity to 0 by default
+    private Integer soldQuantity = 0;
 }

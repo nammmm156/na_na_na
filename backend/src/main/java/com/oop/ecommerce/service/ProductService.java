@@ -5,6 +5,9 @@ import com.oop.ecommerce.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.oop.ecommerce.dto.ProductStatisticsDto;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,5 +48,39 @@ public class ProductService {
                     existingProduct.setImageUrl(updatedProduct.getImageUrl());
                     return productRepository.save(existingProduct);
                 });
+    }
+
+    public Product buyProduct(Long id, int quantity) {
+        return productRepository.findById(id).map(product -> {
+            if (product.getStockQuantity() < quantity) {
+                throw new IllegalArgumentException("Not enough stock for product: " + product.getName());
+            }
+            product.setStockQuantity(product.getStockQuantity() - quantity);
+            if (product.getSoldQuantity() == null) {
+                product.setSoldQuantity(0);
+            }
+            product.setSoldQuantity(product.getSoldQuantity() + quantity);
+            return productRepository.save(product);
+        }).orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + id));
+    }
+
+    public ProductStatisticsDto getStatistics() {
+        List<Product> products = productRepository.findAll();
+        long totalProducts = products.size();
+        long totalItemsLeft = 0;
+        long totalItemsSold = 0;
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+
+        for (Product p : products) {
+            totalItemsLeft += (p.getStockQuantity() != null ? p.getStockQuantity() : 0);
+            long sold = (p.getSoldQuantity() != null ? p.getSoldQuantity() : 0);
+            totalItemsSold += sold;
+            
+            if (p.getPrice() != null) {
+                totalRevenue = totalRevenue.add(p.getPrice().multiply(BigDecimal.valueOf(sold)));
+            }
+        }
+
+        return new ProductStatisticsDto(totalProducts, totalItemsLeft, totalItemsSold, totalRevenue);
     }
 }

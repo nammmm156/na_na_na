@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.oop.ecommerce.dto.ProductStatisticsDto;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import java.util.List;
 
 @RestController
@@ -24,6 +27,12 @@ public class ProductController {
         return productService.getAllProducts();
     }
 
+    @GetMapping("/statistics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ProductStatisticsDto getStatistics() {
+        return productService.getStatistics();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
         return productService.getProductById(id)
@@ -32,11 +41,23 @@ public class ProductController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public Product createProduct(@RequestBody Product product) {
         return productService.saveProduct(product);
     }
 
+    @PostMapping("/{id}/buy")
+    public ResponseEntity<?> buyProduct(@PathVariable Long id, @RequestParam(defaultValue = "1") int quantity) {
+        try {
+            Product boughtProduct = productService.buyProduct(id, quantity);
+            return ResponseEntity.ok(boughtProduct);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
         return productService.updateProduct(id, product)
                 .map(ResponseEntity::ok)
@@ -44,6 +65,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
