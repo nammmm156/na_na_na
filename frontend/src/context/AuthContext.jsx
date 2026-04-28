@@ -11,7 +11,14 @@ function readStoredUser() {
   const raw = localStorage.getItem('quanlyshop_user')
   if (!raw) return null
   try {
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    // Force re-login if stored user is missing role (old session)
+    if (!parsed.role) {
+      localStorage.removeItem('quanlyshop_user')
+      localStorage.removeItem('quanlyshop_token')
+      return null
+    }
+    return parsed
   } catch {
     return null
   }

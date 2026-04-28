@@ -12,6 +12,9 @@ const emptyForm = {
   imageUrl: '',
 }
 
+const fallbackImage =
+  'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80'
+
 export default function Products() {
   const { isAuthenticated, isAdmin } = useAuth()
   const [items, setItems] = useState([])
@@ -19,6 +22,7 @@ export default function Products() {
   const [error, setError] = useState('')
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
+  const [showForm, setShowForm] = useState(false)
 
   const load = useCallback(async () => {
     setError('')
@@ -48,11 +52,21 @@ export default function Products() {
       category: p.category ?? '',
       imageUrl: p.imageUrl ?? '',
     })
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function cancelEdit() {
     setEditingId(null)
     setForm(emptyForm)
+    setShowForm(false)
+  }
+
+  function startCreate() {
+    setEditingId(null)
+    setForm(emptyForm)
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function handleSubmit(e) {
@@ -100,23 +114,44 @@ export default function Products() {
     }
   }
 
+  async function handleBuy(id) {
+    setError('')
+    try {
+      const res = await apiFetch(`/api/products/${id}/buy`, { method: 'POST' })
+      if (!res.ok) throw new Error((await res.text()) || 'Mua thất bại')
+      await load()
+    } catch (err) {
+      setError(err.message || 'Lỗi khi mua')
+    }
+  }
+
   return (
     <div className="products-page">
       <header className="page-header">
         <div>
           <h1>Sản phẩm</h1>
-          <p className="muted">Xem công khai; thêm / sửa / xóa cần đăng nhập admin.</p>
+          <p className="muted">
+            {isAdmin ? 'Quản lý sản phẩm — thêm, sửa, xóa.' : 'Khám phá các sản phẩm chất lượng cao.'}
+          </p>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={load} disabled={loading}>
-          Làm mới
-        </button>
+        <div className="header-actions">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={load} disabled={loading}>
+            ↻ Làm mới
+          </button>
+          {isAdmin && !showForm ? (
+            <button type="button" className="btn btn-primary btn-sm" onClick={startCreate}>
+              + Thêm sản phẩm
+            </button>
+          ) : null}
+        </div>
       </header>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
 
-      {isAdmin ? (
+      {/* Admin Form */}
+      {isAdmin && showForm ? (
         <section className="card form-card">
-          <h2>{editingId ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h2>
+          <h2>{editingId ? '✏️ Sửa sản phẩm' : '➕ Thêm sản phẩm mới'}</h2>
           <form onSubmit={handleSubmit} className="form-grid">
             <label>
               Tên *
@@ -169,73 +204,101 @@ export default function Products() {
                 placeholder="https://..."
               />
             </label>
+            {form.imageUrl ? (
+              <div className="span-2 form-preview">
+                <img src={form.imageUrl} alt="Preview" onError={(e) => { e.target.style.display = 'none' }} />
+              </div>
+            ) : null}
             <div className="form-actions span-2">
               <button type="submit" className="btn btn-primary">
                 {editingId ? 'Cập nhật' : 'Thêm mới'}
               </button>
-              {editingId ? (
-                <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
-                  Hủy
-                </button>
-              ) : null}
+              <button type="button" className="btn btn-secondary" onClick={cancelEdit}>
+                Hủy
+              </button>
             </div>
           </form>
         </section>
-      ) : (
-        <p className="muted hint">
-          <Link to="/login">Đăng nhập</Link> với tài khoản admin để quản lý sản phẩm.
-        </p>
-      )}
+      ) : null}
 
-      <section className="card">
+      {/* Product Grid */}
+      <section>
         {loading ? (
-          <p className="muted">Đang tải…</p>
+          <div className="products-grid">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton-card" />
+            ))}
+          </div>
         ) : items.length === 0 ? (
-          <p className="muted">Chưa có sản phẩm.</p>
+          <div className="empty-state">
+            <h3>Chưa có sản phẩm</h3>
+            <p>Hãy thêm sản phẩm đầu tiên!</p>
+          </div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Tên</th>
-                  <th>Giá</th>
-                  {isAdmin ? <th>Tồn</th> : null}
-                  <th>Danh mục</th>
-                  {isAdmin ? <th /> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((p) => (
-                  <tr key={p.id}>
-                    <td style={{width: '60px'}}>
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.name} style={{width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px'}} />
-                      ) : null}
-                    </td>
-                    <td>
-                      <strong>{p.name}</strong>
-                      {p.description ? (
-                        <div className="muted small line-clamp">{p.description}</div>
-                      ) : null}
-                    </td>
-                    <td>{formatPrice(p.price)}</td>
-                    {isAdmin ? <td>{p.stockQuantity ?? '—'}</td> : null}
-                    <td>{p.category ?? '—'}</td>
+          <div className="products-grid">
+            {items.map((p) => (
+              <article key={p.id} className="product-card">
+                <Link to={`/products/${p.id}`} className="product-media">
+                  <img
+                    src={p.imageUrl || fallbackImage}
+                    alt={p.name}
+                    loading="lazy"
+                    onError={(e) => { e.target.src = fallbackImage }}
+                  />
+                </Link>
+                <div className="product-content">
+                  <p className="product-category">{p.category || 'General'}</p>
+                  <h3>
+                    <Link to={`/products/${p.id}`}>{p.name}</Link>
+                  </h3>
+                  <p className="product-description">
+                    {p.description || 'Sản phẩm chất lượng cao.'}
+                  </p>
+                  <div className="product-footer">
+                    <strong className="product-price">{formatPrice(p.price)}</strong>
                     {isAdmin ? (
-                      <td className="actions">
-                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => startEdit(p)}>
-                          Sửa
-                        </button>
-                        <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDelete(p.id)}>
-                          Xóa
-                        </button>
-                      </td>
+                      <span className="product-stock">
+                        Kho: {p.stockQuantity ?? 0}
+                      </span>
                     ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </div>
+                </div>
+                <div className="product-actions">
+                  {isAuthenticated && !isAdmin ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm btn-full"
+                      onClick={() => handleBuy(p.id)}
+                    >
+                      🛒 Mua ngay
+                    </button>
+                  ) : null}
+                  {isAdmin ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm btn-full"
+                        onClick={() => startEdit(p)}
+                      >
+                        ✏️ Sửa
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm btn-full"
+                        onClick={() => handleDelete(p.id)}
+                      >
+                        🗑️ Xóa
+                      </button>
+                    </>
+                  ) : null}
+                  {!isAuthenticated ? (
+                    <Link to="/login" className="btn btn-secondary btn-sm btn-full">
+                      Đăng nhập để mua
+                    </Link>
+                  ) : null}
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>
