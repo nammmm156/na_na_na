@@ -13,7 +13,7 @@ const emptyForm = {
 }
 
 export default function Products() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isAdmin } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -105,7 +105,7 @@ export default function Products() {
       <header className="page-header">
         <div>
           <h1>Sản phẩm</h1>
-          <p className="muted">Xem công khai; thêm / sửa / xóa cần đăng nhập.</p>
+          <p className="muted">Xem công khai; thêm / sửa / xóa cần đăng nhập admin.</p>
         </div>
         <button type="button" className="btn btn-ghost" onClick={load} disabled={loading}>
           Làm mới
@@ -114,7 +114,7 @@ export default function Products() {
 
       {error ? <div className="alert alert-error">{error}</div> : null}
 
-      {isAuthenticated ? (
+      {isAdmin ? (
         <section className="card form-card">
           <h2>{editingId ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h2>
           <form onSubmit={handleSubmit} className="form-grid">
@@ -183,7 +183,7 @@ export default function Products() {
         </section>
       ) : (
         <p className="muted hint">
-          <Link to="/login">Đăng nhập</Link> để quản lý sản phẩm (API yêu cầu JWT cho POST/PUT/DELETE).
+          <Link to="/login">Đăng nhập</Link> với tài khoản admin để quản lý sản phẩm.
         </p>
       )}
 
@@ -197,16 +197,22 @@ export default function Products() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th></th>
                   <th>Tên</th>
                   <th>Giá</th>
-                  <th>Tồn</th>
+                  {isAdmin ? <th>Tồn</th> : null}
                   <th>Danh mục</th>
-                  {isAuthenticated ? <th /> : null}
+                  {isAdmin ? <th /> : null}
                 </tr>
               </thead>
               <tbody>
                 {items.map((p) => (
                   <tr key={p.id}>
+                    <td style={{width: '60px'}}>
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt={p.name} style={{width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px'}} />
+                      ) : null}
+                    </td>
                     <td>
                       <strong>{p.name}</strong>
                       {p.description ? (
@@ -214,9 +220,9 @@ export default function Products() {
                       ) : null}
                     </td>
                     <td>{formatPrice(p.price)}</td>
-                    <td>{p.stockQuantity ?? '—'}</td>
+                    {isAdmin ? <td>{p.stockQuantity ?? '—'}</td> : null}
                     <td>{p.category ?? '—'}</td>
-                    {isAuthenticated ? (
+                    {isAdmin ? (
                       <td className="actions">
                         <button type="button" className="btn btn-sm btn-ghost" onClick={() => startEdit(p)}>
                           Sửa
