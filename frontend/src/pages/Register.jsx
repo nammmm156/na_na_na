@@ -31,13 +31,13 @@ export default function Register() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Đăng ký</h1>
-        <p className="muted">Tạo tài khoản để thêm / sửa / xóa sản phẩm.</p>
+        <h1>Create account</h1>
+        <p className="muted">Join QuanlyShop today</p>
         <form onSubmit={handleSubmit} className="form-stack">
           {error ? <div className="alert alert-error">{error}</div> : null}
           {success ? <div className="alert alert-success">{success}</div> : null}
           <label>
-            Tên đăng nhập
+            Username
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -58,7 +58,7 @@ export default function Register() {
             />
           </label>
           <label>
-            Mật khẩu (tối thiểu 6 ký tự)
+            Password (minimum 6 chars)
             <input
               type="password"
               value={password}
@@ -69,11 +69,11 @@ export default function Register() {
             />
           </label>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Đang xử lý…' : 'Đăng ký'}
+            {loading ? 'Loading...' : 'Register'}
           </button>
         </form>
         <p className="muted small">
-          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+          Already have an account? <Link to="/login">Login</Link>
         </p>
       </div>
     </div>

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../api/client.js'
+import ProductCard from '../components/ProductCard.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { sampleProducts } from '../data/sampleProducts.js'
 
 const emptyForm = {
   name: '',
@@ -13,10 +14,13 @@ const emptyForm = {
 }
 
 export default function Products() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isAdmin } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('all')
+  const [priceFilter, setPriceFilter] = useState('all')
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
 
@@ -26,9 +30,11 @@ export default function Products() {
     try {
       const res = await apiFetch('/api/products')
       if (!res.ok) throw new Error(await res.text())
-      setItems(await res.json())
+      const data = await res.json()
+      setItems(Array.isArray(data) && data.length ? data : sampleProducts)
     } catch (e) {
-      setError(e.message || 'Không tải được danh sách')
+      setItems(sampleProducts)
+      setError('')
     } finally {
       setLoading(false)
     }
@@ -100,26 +106,81 @@ export default function Products() {
     }
   }
 
+  const categories = useMemo(() => {
+    const fromItems = [...items, ...sampleProducts]
+      .map((item) => item.category)
+      .filter(Boolean)
+      .map((item) => item.toLowerCase())
+    return ['all', ...new Set(fromItems)]
+  }, [items])
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const bySearch = item.name.toLowerCase().includes(search.toLowerCase())
+      const byCategory = category === 'all' || (item.category || '').toLowerCase() === category
+      const price = Number(item.price || 0)
+      const byPrice =
+        priceFilter === 'all' ||
+        (priceFilter === 'low' && price < 5000000) ||
+        (priceFilter === 'mid' && price >= 5000000 && price <= 15000000) ||
+        (priceFilter === 'high' && price > 15000000)
+      return bySearch && byCategory && byPrice
+    })
+  }, [items, search, category, priceFilter])
+
+  const canManage = isAuthenticated && isAdmin
+
   return (
     <div className="products-page">
-      <header className="page-header">
+      <section className="hero card">
         <div>
-          <h1>Sản phẩm</h1>
-          <p className="muted">Xem công khai; thêm / sửa / xóa cần đăng nhập.</p>
+          <h1>Discover the best products for you</h1>
+          <p>High quality products with a modern shopping experience.</p>
+          {/* TODO: Add hero banner image here (e.g. lifestyle tech setup from Unsplash) */}
         </div>
-        <button type="button" className="btn btn-ghost" onClick={load} disabled={loading}>
-          Làm mới
+        <img
+          src="https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=1400&q=80"
+          alt="Hero banner"
+        />
+      </section>
+
+      <header className="page-header compact">
+        <h2>Featured Products</h2>
+        <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}>
+          Lam moi
         </button>
       </header>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
 
-      {isAuthenticated ? (
+      <section className="toolbar card">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="search-input"
+          placeholder="Search products..."
+        />
+        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+          {categories.map((item) => (
+            <option key={item} value={item}>
+              {item === 'all' ? 'All categories' : item}
+            </option>
+          ))}
+        </select>
+        <select value={priceFilter} onChange={(e) => setPriceFilter(e.target.value)}>
+          <option value="all">All prices</option>
+          <option value="low">Below 5M</option>
+          <option value="mid">5M - 15M</option>
+          <option value="high">Above 15M</option>
+        </select>
+      </section>
+
+      {canManage ? (
         <section className="card form-card">
-          <h2>{editingId ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h2>
+          <h3>{editingId ? 'Cap nhat san pham' : 'Them san pham moi'}</h3>
           <form onSubmit={handleSubmit} className="form-grid">
             <label>
-              Tên *
+              Ten *
               <input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -127,7 +188,7 @@ export default function Products() {
               />
             </label>
             <label>
-              Giá *
+              Gia *
               <input
                 type="number"
                 step="0.01"
@@ -138,7 +199,7 @@ export default function Products() {
               />
             </label>
             <label className="span-2">
-              Mô tả
+              Mo ta
               <textarea
                 rows={2}
                 value={form.description}
@@ -146,7 +207,7 @@ export default function Products() {
               />
             </label>
             <label>
-              Tồn kho
+              Ton kho
               <input
                 type="number"
                 min="0"
@@ -155,14 +216,14 @@ export default function Products() {
               />
             </label>
             <label>
-              Danh mục
+              Danh muc
               <input
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
               />
             </label>
             <label className="span-2">
-              URL ảnh
+              URL anh
               <input
                 value={form.imageUrl}
                 onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
@@ -171,77 +232,52 @@ export default function Products() {
             </label>
             <div className="form-actions span-2">
               <button type="submit" className="btn btn-primary">
-                {editingId ? 'Cập nhật' : 'Thêm mới'}
+                {editingId ? 'Cap nhat' : 'Them moi'}
               </button>
               {editingId ? (
-                <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
-                  Hủy
+                <button type="button" className="btn btn-secondary" onClick={cancelEdit}>
+                  Huy
                 </button>
               ) : null}
             </div>
           </form>
         </section>
-      ) : (
-        <p className="muted hint">
-          <Link to="/login">Đăng nhập</Link> để quản lý sản phẩm (API yêu cầu JWT cho POST/PUT/DELETE).
-        </p>
-      )}
+      ) : null}
 
       <section className="card">
         {loading ? (
-          <p className="muted">Đang tải…</p>
-        ) : items.length === 0 ? (
-          <p className="muted">Chưa có sản phẩm.</p>
+          <div className="skeleton-grid">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="skeleton-card" />
+            ))}
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="empty-state">
+            <h3>Khong co ket qua phu hop</h3>
+            <p>Thu doi tu khoa tim kiem hoac bo loc.</p>
+          </div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Tên</th>
-                  <th>Giá</th>
-                  <th>Tồn</th>
-                  <th>Danh mục</th>
-                  {isAuthenticated ? <th /> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <strong>{p.name}</strong>
-                      {p.description ? (
-                        <div className="muted small line-clamp">{p.description}</div>
-                      ) : null}
-                    </td>
-                    <td>{formatPrice(p.price)}</td>
-                    <td>{p.stockQuantity ?? '—'}</td>
-                    <td>{p.category ?? '—'}</td>
-                    {isAuthenticated ? (
-                      <td className="actions">
-                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => startEdit(p)}>
-                          Sửa
-                        </button>
-                        <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDelete(p.id)}>
-                          Xóa
-                        </button>
-                      </td>
+          <div className="products-grid">
+            {filteredItems.map((p) => (
+              <div key={p.id} className="product-grid-item">
+                <ProductCard product={p} />
+                {canManage ? (
+                  <div className="product-admin-actions">
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => startEdit(p)}>
+                      Sua
+                    </button>
+                    {!String(p.id).startsWith('sample-') ? (
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
+                        Xoa
+                      </button>
                     ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </div>
+                ) : null}
+              </div>
+            ))}
           </div>
         )}
       </section>
     </div>
   )
-}
-
-function formatPrice(v) {
-  if (v == null) return '—'
-  try {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(v))
-  } catch {
-    return String(v)
-  }
 }

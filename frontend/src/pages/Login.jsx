@@ -27,12 +27,12 @@ export default function Login() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Đăng nhập</h1>
-        <p className="muted">Dùng tài khoản đã đăng ký để quản lý sản phẩm.</p>
+        <h1>Welcome back</h1>
+        <p className="muted">Sign in to continue</p>
         <form onSubmit={handleSubmit} className="form-stack">
           {error ? <div className="alert alert-error">{error}</div> : null}
           <label>
-            Tên đăng nhập
+            Username
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -41,7 +41,7 @@ export default function Login() {
             />
           </label>
           <label>
-            Mật khẩu
+            Password
             <input
               type="password"
               value={password}
@@ -51,11 +51,11 @@ export default function Login() {
             />
           </label>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Đang xử lý…' : 'Đăng nhập'}
+            {loading ? 'Loading...' : 'Login'}
           </button>
         </form>
         <p className="muted small">
-          Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
+          No account yet? <Link to="/register">Create one</Link>
         </p>
       </div>
     </div>

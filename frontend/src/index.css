@@ -1,15 +1,18 @@
 :root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --text: #1a1d21;
-  --muted: #5c6370;
-  --brand: #ff6600;
-  --brand-dark: #e55a00;
-  --border: #e4e6eb;
-  --danger: #c62828;
-  --radius: 12px;
-  --shadow: 0 8px 24px rgba(26, 29, 33, 0.08);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  --bg: #070b16;
+  --bg-secondary: #0f172a;
+  --surface: #111b34;
+  --surface-soft: #182544;
+  --text: #e5ecff;
+  --muted: #96a2c6;
+  --brand: #4f46e5;
+  --brand-strong: #6366f1;
+  --border: #223257;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --radius: 14px;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: var(--text);
@@ -28,15 +31,16 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: radial-gradient(circle at top left, #101a35 0%, var(--bg) 50%, #05070f 100%);
 }
 
 a {
-  color: var(--brand);
+  color: #c7d2fe;
   text-decoration: none;
 }
 
 a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 button {
