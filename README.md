@@ -8,7 +8,7 @@ You will need [Docker](https://www.docker.com/get-started) installed. Use two se
 
 ### 1. Backend
 
-The backend uses an in-memory database by default, so no extra database setup is required.
+Run backend with these command below (If want to add db, change the file application.properties in backend/src/main/resources)
 
 ```bash
 cd backend
