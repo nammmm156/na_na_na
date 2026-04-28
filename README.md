@@ -1,0 +1,40 @@
+# E-Commerce Project
+
+A full-stack e-commerce application with a React (Vite) frontend and a Java Spring Boot backend.
+
+## How to Run with Docker
+
+You will need [Docker](https://www.docker.com/get-started) installed. Use two separate terminal windows to build and run the containers.
+
+### 1. Backend
+
+The backend uses an in-memory database by default, so no extra database setup is required.
+
+```bash
+cd backend
+docker build -t ecommerce-backend .
+docker run -d -p 8080:8080 --name backend ecommerce-backend
+```
+
+### 2. Frontend
+
+You must pass the backend's API URL when building the frontend. If running locally:
+
+```bash
+cd frontend
+docker build --build-arg VITE_API_URL=http://localhost:8080 -t ecommerce-frontend .
+docker run -d -p 80:80 --name frontend ecommerce-frontend
+```
+
+**The application is now running at `http://localhost`!**
+
+---
+
+### Stopping the Application
+
+When you are done, you can stop and remove the containers:
+
+```bash
+docker stop backend frontend
+docker rm backend frontend
+```
