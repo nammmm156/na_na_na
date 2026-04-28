@@ -54,6 +54,6 @@ public class AuthService {
         
         User user = userRepository.findByUsername(request.getUsername()).orElseThrow();
 
-        return new JwtResponse(jwt, user.getUsername(), user.getEmail());
+        return new JwtResponse(jwt, user.getUsername(), user.getEmail(), user.getRole().name());
     }
 }

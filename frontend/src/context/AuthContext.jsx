@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
     }
     const data = await res.json()
     setToken(data.token)
-    const u = { username: data.username, email: data.email }
+    const u = { username: data.username, email: data.email, role: data.role }
     localStorage.setItem('quanlyshop_user', JSON.stringify(u))
     setUser(u)
     return u
@@ -57,6 +57,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: Boolean(getToken()),
+      isAdmin: user?.role === 'ADMIN',
       login,
       register,
       logout,
