@@ -1,17 +1,27 @@
-import { useMemo } from 'react'
-import { sampleProducts } from '../data/sampleProducts.js'
+import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '../api/client.js'
 
 export default function Dashboard() {
-  const stats = useMemo(() => {
-    const revenue = sampleProducts.reduce((total, item) => total + Number(item.price || 0), 0)
-    const users = 256
-    return {
-      revenue,
-      users,
-      products: sampleProducts.length,
-      orders: 1284,
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const loadStats = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await apiFetch('/api/products/statistics')
+      if (res.ok) {
+        setStats(await res.json())
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    loadStats()
+  }, [loadStats])
 
   const salesByCategory = [
     { category: 'Headphones', value: 35 },
@@ -30,6 +40,17 @@ export default function Dashboard() {
     { month: 'Jun', value: 248 },
   ]
 
+  if (loading) {
+    return (
+      <section className="dashboard-page">
+        <div className="page-title">
+          <h1>Dashboard</h1>
+        </div>
+        <p className="muted">Đang tải...</p>
+      </section>
+    )
+  }
+
   return (
     <section className="dashboard-page">
       <div className="page-title">
@@ -37,10 +58,10 @@ export default function Dashboard() {
       </div>
 
       <div className="stats-grid">
-        <StatCard label="Revenue" value={toCurrency(stats.revenue)} trend="+12.5%" />
-        <StatCard label="Users" value={stats.users} trend="+5.4%" />
-        <StatCard label="Products" value={stats.products} trend="+3.1%" />
-        <StatCard label="Orders" value={stats.orders} trend="+8.2%" />
+        <StatCard label="Revenue" value={toCurrency(stats?.totalRevenue || 0)} trend="+12.5%" />
+        <StatCard label="Products" value={stats?.totalProducts || 0} trend="+3.1%" />
+        <StatCard label="Items in Stock" value={stats?.totalItemsLeft || 0} trend="" />
+        <StatCard label="Items Sold" value={stats?.totalItemsSold || 0} trend="+8.2%" />
       </div>
 
       <div className="charts-grid">
@@ -85,13 +106,13 @@ function StatCard({ label, value, trend }) {
     <article className="stat-card">
       <p>{label}</p>
       <h3>{value}</h3>
-      <span>{trend}</span>
+      {trend ? <span>{trend}</span> : null}
     </article>
   )
 }
 
 function toCurrency(value) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(
     value,
   )
 }

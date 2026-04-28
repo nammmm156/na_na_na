@@ -11,9 +11,7 @@ function readStoredUser() {
   const raw = localStorage.getItem('quanlyshop_user')
   if (!raw) return null
   try {
-    const parsed = JSON.parse(raw)
-    const guessedRole = parsed?.username === 'admin' ? 'admin' : 'user'
-    return { ...parsed, role: (parsed?.role || guessedRole).toLowerCase() }
+    return JSON.parse(raw)
   } catch {
     return null
   }
@@ -33,13 +31,7 @@ export function AuthProvider({ children }) {
     }
     const data = await res.json()
     setToken(data.token)
-    const inferredRole = (data.username || username) === 'admin' ? 'admin' : 'user'
-    const resolvedRole = data.role || data.roles?.[0] || inferredRole
-    const u = {
-      username: data.username || username,
-      email: data.email || '',
-      role: typeof resolvedRole === 'string' ? resolvedRole.toLowerCase() : 'user',
-    }
+    const u = { username: data.username, email: data.email }
     localStorage.setItem('quanlyshop_user', JSON.stringify(u))
     setUser(u)
     return u
@@ -65,7 +57,6 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: Boolean(getToken()),
-      isAdmin: user?.role === 'admin',
       login,
       register,
       logout,

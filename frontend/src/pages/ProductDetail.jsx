@@ -1,15 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
-import { sampleProducts } from '../data/sampleProducts.js'
 import { formatPrice } from '../utils/format.js'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  const localProduct = useMemo(() => sampleProducts.find((item) => String(item.id) === String(id)), [id])
 
   useEffect(() => {
     let mounted = true
@@ -22,10 +19,10 @@ export default function ProductDetail() {
           const data = await res.json()
           if (mounted) setProduct(data)
         } else if (mounted) {
-          setProduct(localProduct || null)
+          setProduct(null)
         }
       } catch {
-        if (mounted) setProduct(localProduct || null)
+        if (mounted) setProduct(null)
       } finally {
         if (mounted) setLoading(false)
       }
@@ -35,7 +32,7 @@ export default function ProductDetail() {
     return () => {
       mounted = false
     }
-  }, [id, localProduct])
+  }, [id])
 
   if (loading) {
     return (
