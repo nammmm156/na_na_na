@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useShop } from '../context/ShopContext.jsx'
 
 const emptyForm = {
   name: '',
@@ -16,7 +17,9 @@ const fallbackImage =
   'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80'
 
 export default function Products() {
+  const navigate = useNavigate()
   const { isAuthenticated, isAdmin } = useAuth()
+  const { addToCart } = useShop()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -114,15 +117,17 @@ export default function Products() {
     }
   }
 
-  async function handleBuy(id) {
-    setError('')
-    try {
-      const res = await apiFetch(`/api/products/${id}/buy`, { method: 'POST' })
-      if (!res.ok) throw new Error((await res.text()) || 'Mua thất bại')
-      await load()
-    } catch (err) {
-      setError(err.message || 'Lỗi khi mua')
-    }
+  function handleAddToCart(product) {
+    addToCart(product, 1)
+  }
+
+  function handleBuyNow(product) {
+    navigate('/checkout', {
+      state: {
+        mode: 'buyNow',
+        items: [{ ...product, productId: product.id, quantity: 1 }],
+      },
+    })
   }
 
   return (
@@ -265,13 +270,22 @@ export default function Products() {
                 </div>
                 <div className="product-actions">
                   {isAuthenticated && !isAdmin ? (
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm btn-full"
-                      onClick={() => handleBuy(p.id)}
-                    >
-                      🛒 Mua ngay
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm btn-full"
+                        onClick={() => handleAddToCart(p)}
+                      >
+                        + Thêm vào giỏ
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm btn-full"
+                        onClick={() => handleBuyNow(p)}
+                      >
+                        🛒 Mua ngay
+                      </button>
+                    </>
                   ) : null}
                   {isAdmin ? (
                     <>

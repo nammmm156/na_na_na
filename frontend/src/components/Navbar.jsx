@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useShop } from '../context/ShopContext.jsx'
 
 export default function Navbar() {
   const navigate = useNavigate()
   const { user, isAuthenticated, isAdmin, logout } = useAuth()
+  const { cartItemsCount } = useShop()
 
   function handleLogout() {
     logout()
@@ -19,8 +21,24 @@ export default function Navbar() {
 
         <nav className="nav-links">
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
-            San pham
+            Sản phẩm
           </NavLink>
+          {isAuthenticated && !isAdmin ? (
+            <>
+              <NavLink to="/cart" className={({ isActive }) => (isActive ? 'active' : '')}>
+                Giỏ hàng{cartItemsCount ? ` (${cartItemsCount})` : ''}
+              </NavLink>
+              <NavLink to="/orders" className={({ isActive }) => (isActive ? 'active' : '')}>
+                Lịch sử mua
+              </NavLink>
+              <NavLink to="/vouchers" className={({ isActive }) => (isActive ? 'active' : '')}>
+                Voucher
+              </NavLink>
+              <NavLink to="/returns" className={({ isActive }) => (isActive ? 'active' : '')}>
+                Trả hàng
+              </NavLink>
+            </>
+          ) : null}
           {isAdmin ? (
             <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
               Dashboard
@@ -33,7 +51,7 @@ export default function Navbar() {
             <>
               <span className="user-pill">{user?.username}</span>
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleLogout}>
-                Dang xuat
+                Đăng xuất
               </button>
             </>
           ) : (
