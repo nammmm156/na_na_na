@@ -38,3 +38,7 @@ When you are done, you can stop and remove the containers:
 docker stop backend frontend
 docker rm backend frontend
 ```
+Trong docker-compose.yml nếu chạy trên VM thì thay 
+```
+VITE_API_URL: http://<ip_vm>:8080
+```
