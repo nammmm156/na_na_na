@@ -47,9 +47,11 @@ public class ProductController {
     }
 
     @PostMapping("/{id}/buy")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> buyProduct(@PathVariable Long id, @RequestParam(defaultValue = "1") int quantity) {
         try {
-            Product boughtProduct = productService.buyProduct(id, quantity);
+            String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+            Product boughtProduct = productService.buyProduct(id, quantity, username);
             return ResponseEntity.ok(boughtProduct);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

@@ -2,6 +2,7 @@ package com.oop.ecommerce.service;
 
 import com.oop.ecommerce.model.Product;
 import com.oop.ecommerce.repository.ProductRepository;
+import com.oop.ecommerce.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +16,14 @@ import java.util.Optional;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Autowired
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, UserRepository userRepository, EmailService emailService) {
         this.productRepository = productRepository;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     public List<Product> getAllProducts() {
@@ -50,7 +55,7 @@ public class ProductService {
                 });
     }
 
-    public Product buyProduct(Long id, int quantity) {
+    public Product buyProduct(Long id, int quantity, String username) {
         return productRepository.findById(id).map(product -> {
             if (product.getStockQuantity() < quantity) {
                 throw new IllegalArgumentException("Not enough stock for product: " + product.getName());
@@ -60,7 +65,14 @@ public class ProductService {
                 product.setSoldQuantity(0);
             }
             product.setSoldQuantity(product.getSoldQuantity() + quantity);
-            return productRepository.save(product);
+            Product savedProduct = productRepository.save(product);
+
+            // Fetch user and send email
+            userRepository.findByUsername(username).ifPresent(user -> {
+                emailService.sendPurchaseConfirmation(user.getEmail(), savedProduct, quantity);
+            });
+
+            return savedProduct;
         }).orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + id));
     }
 
