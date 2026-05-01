@@ -1,40 +1,28 @@
 # E-Commerce Project
 
-A full-stack e-commerce application with a React (Vite) frontend and a Java Spring Boot backend.
+A full-stack e-commerce application with a React (Vite) frontend, a Java Spring Boot backend, and a PostgreSQL database.
 
-## How to Run with Docker
+## Quick Start (Deploy Everything)
 
-You will need [Docker](https://www.docker.com/get-started) installed. Use two separate terminal windows to build and run the containers.
+The simplest way to deploy the entire project (Database, Backend, and Frontend) is using Docker Compose.
 
-### 1. Backend
-
-Run backend with these command below (If want to add db, change the file application.properties in backend/src/main/resources)
+1. Ensure you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+2. Ensure the `.env` file is in the root folder.
+3. Run this command in the project root:
 
 ```bash
-cd backend
-docker build -t ecommerce-backend .
-docker run -d -p 8080:8080 --name backend ecommerce-backend
+docker-compose up -d --build
 ```
 
-### 2. Frontend
+**That's it!**
+- Frontend: `http://localhost`
+- Backend API: `http://localhost:8080`
+- Database: `localhost:5432`
 
-You must pass the backend's API URL when building the frontend. If running locally:
+## Stop Deployment
 
-```bash
-cd frontend
-docker build --build-arg VITE_API_URL=http://localhost:8080 -t ecommerce-frontend .
-docker run -d -p 80:80 --name frontend ecommerce-frontend
-```
-
-**The application is now running at `http://localhost`!**
-
----
-
-### Stopping the Application
-
-When you are done, you can stop and remove the containers:
+To stop and remove everything, run:
 
 ```bash
-docker stop backend frontend
-docker rm backend frontend
+docker-compose down
 ```
