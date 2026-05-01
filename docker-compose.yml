@@ -1,5 +1,9 @@
 version: "3.9"
 
+networks:
+  ecommerce_net:
+    driver: bridge
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -15,6 +19,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -42,6 +48,8 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     ports:
       - "8080:8080"
+    networks:
+      - ecommerce_net
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,15 +57,14 @@ services:
   frontend:
     build:
       context: ./frontend
-      args:
-        VITE_API_URL: http://localhost:8080
     container_name: ecommerce-frontend
     restart: unless-stopped
     ports:
       - "80:80"
+    networks:
+      - ecommerce_net
     depends_on:
       - backend
 
 volumes:
   postgres_data:
-
