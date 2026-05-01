@@ -1,45 +1,33 @@
 version: "3.9"
 
-networks:
-  ecommerce_net:
-    driver: bridge
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: ecommerce-postgres
+    network_mode: "host"
     restart: unless-stopped
-    env_file:
-      - ./.env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - ecommerce_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
       retries: 10
 
   backend:
     build:
       context: ./backend
     container_name: ecommerce-backend
-    entrypoint: ["/bin/sh", "-c", "sleep 10 && java -jar app.jar"]
+    network_mode: "host"
     restart: unless-stopped
-    env_file:
-      - ./.env
     environment:
       SPRING_PROFILES_ACTIVE: psql
-      JAVA_TOOL_OPTIONS: -Dspring.profiles.active=psql
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -47,24 +35,15 @@ services:
       JWT_EXPIRATION: ${JWT_EXPIRATION}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
-    ports:
-      - "8080:8080"
-    networks:
-      - ecommerce_net
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
 
   frontend:
     build:
       context: ./frontend
     container_name: ecommerce-frontend
-    command: ["/bin/sh", "-c", "sleep 15 && nginx -g 'daemon off;'"]
+    network_mode: "host"
     restart: unless-stopped
-    ports:
-      - "80:80"
-    networks:
-      - ecommerce_net
     depends_on:
       - backend
 
