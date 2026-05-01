@@ -26,3 +26,7 @@ To stop and remove everything, run:
 ```bash
 docker-compose down
 ```
+Trong docker-compose.yml nếu chạy trên VM thì thay 
+```
+VITE_API_URL: http://<ip_vm>:8080
+```
