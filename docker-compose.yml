@@ -31,6 +31,7 @@ services:
     build:
       context: ./backend
     container_name: ecommerce-backend
+    entrypoint: ["/bin/sh", "-c", "sleep 10 && java -jar app.jar"]
     restart: unless-stopped
     env_file:
       - ./.env
@@ -58,6 +59,7 @@ services:
     build:
       context: ./frontend
     container_name: ecommerce-frontend
+    command: ["/bin/sh", "-c", "sleep 15 && nginx -g 'daemon off;'"]
     restart: unless-stopped
     ports:
       - "80:80"
