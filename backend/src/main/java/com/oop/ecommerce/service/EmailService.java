@@ -36,7 +36,7 @@ public class EmailService {
                     "Quantity: " + quantity + "\n" +
                     "Total Price: $" + (product.getPrice().multiply(java.math.BigDecimal.valueOf(quantity))) + "\n\n" +
                     "We hope you enjoy your purchase.\n\n" +
-                    "Best regards,\nYour E-Commerce Team";
+                    "Best regards,\nShoeshop Ecommerce Team";
             
             message.setText(text);
             javaMailSender.send(message);
