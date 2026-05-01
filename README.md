@@ -8,9 +8,10 @@ The simplest way to deploy the entire project (Database, Backend, and Frontend) 
 
 1. Ensure you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 2. Ensure the `.env` file is in the root folder.
-3. Run this command in the project root:
+3. Build the Docker images and start the containers by running this command in the project root:
 
 ```bash
+# The --build flag tells Docker to build the images for you automatically before starting
 docker-compose up -d --build
 ```
 
