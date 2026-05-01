@@ -1,3 +1,4 @@
+import React from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
@@ -14,6 +15,41 @@ import Products from './pages/Products.jsx'
 import Returns from './pages/Returns.jsx'
 import Vouchers from './pages/Vouchers.jsx'
 import './App.css'
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null, info: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, info) {
+    this.setState({ info })
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', color: 'white' }}>
+          <h2>Đã xảy ra lỗi (Crash)</h2>
+          <pre style={{ color: 'red', whiteSpace: 'pre-wrap' }}>
+            {this.state.error && this.state.error.toString()}
+          </pre>
+          <pre style={{ color: 'gray', whiteSpace: 'pre-wrap' }}>
+            {this.state.info && this.state.info.componentStack}
+          </pre>
+          <button onClick={() => window.location.reload()} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+            Tải lại trang
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function Layout() {
   return (
@@ -76,8 +112,10 @@ function Layout() {
 export default function App() {
   const { user } = useAuth()
   return (
-    <ShopProvider username={user?.username}>
-      <Layout />
-    </ShopProvider>
+    <ErrorBoundary>
+      <ShopProvider username={user?.username}>
+        <Layout />
+      </ShopProvider>
+    </ErrorBoundary>
   )
 }

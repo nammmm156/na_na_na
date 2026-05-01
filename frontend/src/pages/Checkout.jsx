@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { apiFetch } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useShop } from '../context/ShopContext.jsx'
 import { formatPrice } from '../utils/format.js'
@@ -44,7 +45,6 @@ export default function Checkout() {
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((s, it) => s + it.price * it.quantity, 0)
-    // Use cart voucher only (frontend-only). For buyNow, we still allow the same discount logic via cart state.
     const discount = isBuyNow ? 0 : pricing.discount
     const total = Math.max(0, subtotal - discount)
     return { subtotal, discount, total }
@@ -65,16 +65,37 @@ export default function Checkout() {
       return
     }
 
-    const order = createOrder({
-      items,
-      shippingAddress,
-      paymentMethod,
-      note,
-    })
+    try {
+      // 1. Call Backend API to update stock and trigger email
+      for (const item of items) {
+        const res = await apiFetch(`/api/products/${item.productId}/buy?quantity=${item.quantity}`, {
+          method: 'POST',
+        })
+        if (!res.ok) {
+          const errText = await res.text()
+          throw new Error(`Lỗi mua ${item.name}: ${errText}`)
+        }
+      }
 
-    if (!isBuyNow) clearCart()
-    setSuccess(`Đặt hàng thành công. Mã đơn: ${order.id}`)
-    navigate('/orders', { replace: true, state: { highlightOrderId: order.id } })
+      // 2. Save order to client-side history
+      const order = createOrder({
+        items,
+        shippingAddress,
+        paymentMethod,
+        note,
+      })
+
+      if (!isBuyNow) clearCart()
+      setSuccess(`Đặt hàng thành công. Mã đơn: ${order.id}`)
+      
+      // Short delay so user can read success message before redirect
+      setTimeout(() => {
+        navigate('/orders', { replace: true, state: { highlightOrderId: order.id } })
+      }, 1000)
+      
+    } catch (err) {
+      setError(err.message || 'Có lỗi xảy ra khi thanh toán.')
+    }
   }
 
   return (

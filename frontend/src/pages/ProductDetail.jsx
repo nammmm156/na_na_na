@@ -41,6 +41,12 @@ export default function ProductDetail() {
     }
   }, [id])
 
+  const reviews = reviewsByProductId?.[id] || []
+  const avgRating = useMemo(() => {
+    if (!reviews.length) return 0
+    return reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
+  }, [reviews])
+
   if (loading) {
     return (
       <section className="detail-page">
@@ -61,12 +67,6 @@ export default function ProductDetail() {
       </section>
     )
   }
-
-  const reviews = reviewsByProductId?.[id] || []
-  const avgRating = useMemo(() => {
-    if (!reviews.length) return 0
-    return reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
-  }, [reviews])
 
   return (
     <section className="detail-page">
