@@ -1,6 +1,7 @@
 package com.oop.ecommerce.controller;
 
 import com.oop.ecommerce.dto.AuthRequest;
+import com.oop.ecommerce.dto.GoogleAuthRequest;
 import com.oop.ecommerce.dto.JwtResponse;
 import com.oop.ecommerce.dto.RegisterRequest;
 import com.oop.ecommerce.service.AuthService;
@@ -30,5 +31,15 @@ public class AuthController {
     public ResponseEntity<JwtResponse> authenticateUser(@Valid @RequestBody AuthRequest authRequest) {
         JwtResponse jwtResponse = authService.login(authRequest);
         return ResponseEntity.ok(jwtResponse);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> googleLogin(@Valid @RequestBody GoogleAuthRequest googleAuthRequest) {
+        try {
+            JwtResponse jwtResponse = authService.googleLogin(googleAuthRequest);
+            return ResponseEntity.ok(jwtResponse);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
