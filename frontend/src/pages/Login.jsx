@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login, googleLogin } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -22,6 +23,23 @@ export default function Login() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('')
+    setLoading(true)
+    try {
+      await googleLogin(credentialResponse.credential)
+      navigate('/')
+    } catch (err) {
+      setError(err.message || 'Google Login failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleError = () => {
+    setError('Google Login failed')
   }
 
   return (
@@ -54,6 +72,17 @@ export default function Login() {
             {loading ? 'Loading...' : 'Login'}
           </button>
         </form>
+
+        <div style={{ marginTop: '1.5rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: '100%', borderBottom: '1px solid #ddd', height: '10px', textAlign: 'center' }}>
+            <span style={{ backgroundColor: '#fff', padding: '0 10px', color: '#666' }}>OR</span>
+          </div>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+          />
+        </div>
+
         <p className="muted small">
           No account yet? <Link to="/register">Create one</Link>
         </p>

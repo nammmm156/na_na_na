@@ -44,6 +44,23 @@ export function AuthProvider({ children }) {
     return u
   }, [])
 
+  const googleLogin = useCallback(async (idToken) => {
+    const res = await apiFetch('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ idToken }),
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(text || 'Đăng nhập Google thất bại')
+    }
+    const data = await res.json()
+    setToken(data.token)
+    const u = { username: data.username, email: data.email, role: data.role }
+    localStorage.setItem('quanlyshop_user', JSON.stringify(u))
+    setUser(u)
+    return u
+  }, [])
+
   const register = useCallback(async (payload) => {
     const res = await apiFetch('/api/auth/register', {
       method: 'POST',
@@ -66,10 +83,11 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(getToken()),
       isAdmin: user?.role === 'ADMIN',
       login,
+      googleLogin,
       register,
       logout,
     }),
-    [user, login, register, logout],
+    [user, login, googleLogin, register, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
