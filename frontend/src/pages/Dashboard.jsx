@@ -1,5 +1,44 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../api/client.js'
+
+/** 6 tháng gần nhất (cũ → mới), tên tháng lấy từ Date (locale en-US → Jan, Feb, …). */
+function getRollingSixMonths() {
+  const out = []
+  const now = new Date()
+  for (let back = 5; back >= 0; back--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - back, 1)
+    out.push({
+      monthKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      month: d.toLocaleString('en-US', { month: 'short' }),
+      value: 0,
+    })
+  }
+  return out
+}
+
+function toNumber(v) {
+  if (v == null) return 0
+  const n = Number(v)
+  return Number.isNaN(n) ? 0 : n
+}
+
+/**
+ * Ưu tiên stats.monthlyRevenue từ API (label + amount).
+ * Không có / rỗng → 6 tháng động, toàn bộ value = 0.
+ */
+function buildMonthlyRevenueSeries(stats) {
+  const slots = getRollingSixMonths()
+  const api = stats?.monthlyRevenue
+  if (!Array.isArray(api) || api.length === 0) {
+    return slots
+  }
+  return slots.map((slot, i) => {
+    const byLabel = api.find((p) => (p.label || p.month) === slot.month)
+    const pt = byLabel ?? api[i]
+    const value = pt ? toNumber(pt.amount ?? pt.value) : 0
+    return { ...slot, value }
+  })
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
@@ -23,21 +62,18 @@ export default function Dashboard() {
     loadStats()
   }, [loadStats])
 
+  const monthlyRevenue = useMemo(() => buildMonthlyRevenueSeries(stats), [stats])
+  const maxMonthlyValue = useMemo(
+    () => Math.max(1, ...monthlyRevenue.map((p) => p.value)),
+    [monthlyRevenue],
+  )
+
   const salesByCategory = [
     { category: 'Headphones', value: 35 },
     { category: 'Laptop', value: 28 },
     { category: 'Camera', value: 20 },
     { category: 'Smartwatch', value: 10 },
     { category: 'Backpack', value: 7 },
-  ]
-
-  const monthlyRevenue = [
-    { month: 'Jan', value: 120 },
-    { month: 'Feb', value: 150 },
-    { month: 'Mar', value: 168 },
-    { month: 'Apr', value: 194 },
-    { month: 'May', value: 226 },
-    { month: 'Jun', value: 248 },
   ]
 
   if (loading) {
@@ -69,11 +105,11 @@ export default function Dashboard() {
           <h3>Revenue Overview</h3>
           <div className="line-chart">
             {monthlyRevenue.map((point, idx) => (
-              <div key={point.month} className="line-item">
+              <div key={point.monthKey} className="line-item">
                 <div
                   className="line-bar"
-                  style={{ height: `${(point.value / 260) * 180}px` }}
-                  title={`${point.month}: $${point.value}k`}
+                  style={{ height: `${(point.value / maxMonthlyValue) * 180}px` }}
+                  title={`${point.month}: ${toCurrency(point.value)}`}
                 />
                 <span>{point.month}</span>
                 {idx < monthlyRevenue.length - 1 ? <i className="line-dot" /> : null}
