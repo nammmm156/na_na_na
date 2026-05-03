@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../api/client.js'
 
-/** 6 tháng gần nhất (cũ → mới), tên tháng lấy từ Date (locale en-US → Jan, Feb, …). */
+function toNumber(value) {
+  if (value == null) return 0
+  const n = Number(value)
+  return Number.isNaN(n) ? 0 : n
+}
+
 function getRollingSixMonths() {
   const out = []
   const now = new Date()
-  for (let back = 5; back >= 0; back--) {
+  for (let back = 5; back >= 0; back -= 1) {
     const d = new Date(now.getFullYear(), now.getMonth() - back, 1)
     out.push({
       monthKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
@@ -16,43 +21,46 @@ function getRollingSixMonths() {
   return out
 }
 
-function toNumber(v) {
-  if (v == null) return 0
-  const n = Number(v)
-  return Number.isNaN(n) ? 0 : n
-}
-
-/**
- * Ưu tiên stats.monthlyRevenue từ API (label + amount).
- * Không có / rỗng → 6 tháng động, toàn bộ value = 0.
- */
 function buildMonthlyRevenueSeries(stats) {
   const slots = getRollingSixMonths()
-  const api = stats?.monthlyRevenue
-  if (!Array.isArray(api) || api.length === 0) {
+  const fromApi = Array.isArray(stats?.monthlyRevenue) ? stats.monthlyRevenue : []
+  if (fromApi.length === 0) {
     return slots
   }
+
   return slots.map((slot, i) => {
-    const byLabel = api.find((p) => (p.label || p.month) === slot.month)
-    const pt = byLabel ?? api[i]
-    const value = pt ? toNumber(pt.amount ?? pt.value) : 0
+    const byLabel = fromApi.find((point) => (point.month || point.label) === slot.month)
+    const point = byLabel ?? fromApi[i]
+    const value = point ? toNumber(point.value ?? point.amount) : 0
     return { ...slot, value }
   })
+}
+
+function formatTrend(percent) {
+  const p = toNumber(percent)
+  if (p > 0) return `+${p.toFixed(1)}%`
+  if (p < 0) return `${p.toFixed(1)}%`
+  return '0%'
 }
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const loadStats = useCallback(async () => {
     setLoading(true)
+    setError('')
     try {
       const res = await apiFetch('/api/products/statistics')
-      if (res.ok) {
-        setStats(await res.json())
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || 'Không tải được dashboard')
       }
-    } catch {
-      // ignore
+      setStats(await res.json())
+    } catch (e) {
+      setStats(null)
+      setError(e.message || 'Không tải được dashboard')
     } finally {
       setLoading(false)
     }
@@ -62,19 +70,15 @@ export default function Dashboard() {
     loadStats()
   }, [loadStats])
 
-  const monthlyRevenue = useMemo(() => buildMonthlyRevenueSeries(stats), [stats])
-  const maxMonthlyValue = useMemo(
-    () => Math.max(1, ...monthlyRevenue.map((p) => p.value)),
-    [monthlyRevenue],
-  )
+  useEffect(() => {
+    const onStatsUpdated = () => loadStats()
+    window.addEventListener('shop:stats-updated', onStatsUpdated)
+    return () => window.removeEventListener('shop:stats-updated', onStatsUpdated)
+  }, [loadStats])
 
-  const salesByCategory = [
-    { category: 'Headphones', value: 35 },
-    { category: 'Laptop', value: 28 },
-    { category: 'Camera', value: 20 },
-    { category: 'Smartwatch', value: 10 },
-    { category: 'Backpack', value: 7 },
-  ]
+  const monthlyRevenue = useMemo(() => buildMonthlyRevenueSeries(stats), [stats])
+  const maxMonthlyValue = useMemo(() => Math.max(1, ...monthlyRevenue.map((p) => p.value)), [monthlyRevenue])
+  const salesByCategory = Array.isArray(stats?.salesByCategory) ? stats.salesByCategory : []
 
   if (loading) {
     return (
@@ -93,11 +97,21 @@ export default function Dashboard() {
         <h1>Dashboard</h1>
       </div>
 
+      {error ? <div className="alert alert-error">{error}</div> : null}
+
       <div className="stats-grid">
-        <StatCard label="Revenue" value={toCurrency(stats?.totalRevenue || 0)} trend="+12.5%" />
-        <StatCard label="Products" value={stats?.totalProducts || 0} trend="+3.1%" />
-        <StatCard label="Items in Stock" value={stats?.totalItemsLeft || 0} trend="" />
-        <StatCard label="Items Sold" value={stats?.totalItemsSold || 0} trend="+8.2%" />
+        <StatCard
+          label="Revenue"
+          value={toCurrency(toNumber(stats?.totalRevenue))}
+          trend={formatTrend(stats?.revenueGrowthPercent)}
+        />
+        <StatCard label="Products" value={toNumber(stats?.totalProducts)} trend="" />
+        <StatCard label="Items in Stock" value={toNumber(stats?.totalItemsLeft)} trend="" />
+        <StatCard
+          label="Items Sold"
+          value={toNumber(stats?.totalItemsSold)}
+          trend={formatTrend(stats?.itemsSoldGrowthPercent)}
+        />
       </div>
 
       <div className="charts-grid">
@@ -121,15 +135,22 @@ export default function Dashboard() {
         <article className="card chart-card">
           <h3>Sales by Category</h3>
           <div className="bar-chart">
-            {salesByCategory.map((item) => (
-              <div key={item.category} className="bar-row">
-                <span>{item.category}</span>
-                <div className="bar-track">
-                  <div className="bar-fill" style={{ width: `${item.value}%` }} />
-                </div>
-                <strong>{item.value}%</strong>
-              </div>
-            ))}
+            {salesByCategory.length === 0 ? (
+              <p className="muted">Chưa có dữ liệu bán hàng theo danh mục.</p>
+            ) : (
+              salesByCategory.map((item) => {
+                const pct = Math.max(0, Math.min(100, toNumber(item.percent)))
+                return (
+                  <div key={item.category} className="bar-row">
+                    <span>{item.category || 'Khác'}</span>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${pct}%` }} />
+                    </div>
+                    <strong>{pct}%</strong>
+                  </div>
+                )
+              })
+            )}
           </div>
         </article>
       </div>

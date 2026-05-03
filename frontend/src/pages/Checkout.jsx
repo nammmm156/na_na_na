@@ -87,12 +87,14 @@ export default function Checkout() {
 
       if (!isBuyNow) clearCart()
       setSuccess(`Đặt hàng thành công. Mã đơn: ${order.id}`)
-      
+
+      window.dispatchEvent(new CustomEvent('shop:stats-updated'))
+
       // Short delay so user can read success message before redirect
       setTimeout(() => {
         navigate('/orders', { replace: true, state: { highlightOrderId: order.id } })
       }, 1000)
-      
+
     } catch (err) {
       setError(err.message || 'Có lỗi xảy ra khi thanh toán.')
     }
