@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/statistics").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll() // publicly view products
+                .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                 .anyRequest().authenticated() // force login for everything else (buying, creating products etc.)
             )
             .sessionManagement(session -> session

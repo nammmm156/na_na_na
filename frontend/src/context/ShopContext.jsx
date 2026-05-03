@@ -28,7 +28,6 @@ function readState(username) {
     },
     orders: [],
     returns: [],
-    reviewsByProductId: {},
   }
   return safeJsonParse(localStorage.getItem(storageKey(username)), initial)
 }
@@ -138,13 +137,6 @@ function reducer(state, action) {
       return { ...state, returns: [ret, ...state.returns] }
     }
 
-    case 'review/add': {
-      const { productId, review } = action
-      const current = state.reviewsByProductId[productId] || []
-      const next = { ...state.reviewsByProductId, [productId]: [review, ...current] }
-      return { ...state, reviewsByProductId: next }
-    }
-
     default:
       return state
   }
@@ -221,29 +213,12 @@ export function ShopProvider({ username, children }) {
     [act],
   )
 
-  const addReview = useCallback(
-    ({ productId, username: reviewer, rating, title, body }) => {
-      const review = {
-        id: uid(),
-        createdAt: new Date().toISOString(),
-        username: reviewer || 'Ẩn danh',
-        rating: Math.min(5, Math.max(1, Number(rating || 5))),
-        title: title || '',
-        body: body || '',
-      }
-      act({ type: 'review/add', productId, review })
-      return review
-    },
-    [act],
-  )
-
   const value = useMemo(
     () => ({
       vouchers: VOUCHERS,
       cart: state.cart,
       orders: state.orders,
       returns: state.returns,
-      reviewsByProductId: state.reviewsByProductId,
 
       cartItemsCount,
       pricing: {
@@ -265,7 +240,6 @@ export function ShopProvider({ username, children }) {
 
       createOrder,
       createReturnRequest,
-      addReview,
     }),
     [
       state,
@@ -281,7 +255,6 @@ export function ShopProvider({ username, children }) {
       applyVoucher,
       createOrder,
       createReturnRequest,
-      addReview,
     ],
   )
 

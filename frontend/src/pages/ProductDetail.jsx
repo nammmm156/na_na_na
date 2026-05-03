@@ -1,19 +1,31 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
+import { fetchProductReviews, postReview } from '../api/reviews.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useShop } from '../context/ShopContext.jsx'
 import { formatPrice } from '../utils/format.js'
+
+function parseReviewComment(comment) {
+  const text = (comment || '').trim()
+  if (!text) return { title: '', body: '' }
+  const parts = text.split(/\n\n/)
+  if (parts.length >= 2) return { title: parts[0].trim() || 'Đánh giá', body: parts.slice(1).join('\n\n').trim() }
+  return { title: 'Đánh giá', body: text }
+}
 
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isAuthenticated, isAdmin, user } = useAuth()
-  const { addToCart, reviewsByProductId, addReview } = useShop()
+  const { addToCart } = useShop()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [reviews, setReviews] = useState([])
+  const [reviewsLoading, setReviewsLoading] = useState(true)
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', body: '' })
   const [reviewMsg, setReviewMsg] = useState('')
+  const [reviewError, setReviewError] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -41,7 +53,24 @@ export default function ProductDetail() {
     }
   }, [id])
 
-  const reviews = reviewsByProductId?.[id] || []
+  useEffect(() => {
+    let mounted = true
+    async function loadReviews() {
+      setReviewsLoading(true)
+      try {
+        const list = await fetchProductReviews(id)
+        if (mounted) setReviews(Array.isArray(list) ? list : [])
+      } catch {
+        if (mounted) setReviews([])
+      } finally {
+        if (mounted) setReviewsLoading(false)
+      }
+    }
+    loadReviews()
+    return () => {
+      mounted = false
+    }
+  }, [id])
   const avgRating = useMemo(() => {
     if (!reviews.length) return 0
     return reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
@@ -133,23 +162,36 @@ export default function ProductDetail() {
             {reviewMsg}
           </div>
         ) : null}
+        {reviewError ? (
+          <div className="alert alert-error" style={{ marginTop: 10 }}>
+            {reviewError}
+          </div>
+        ) : null}
 
         {isAuthenticated && !isAdmin ? (
           <form
             className="form-grid"
             style={{ marginTop: 12 }}
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault()
               setReviewMsg('')
-              addReview({
-                productId: String(id),
-                username: user?.username,
-                rating: reviewForm.rating,
-                title: reviewForm.title,
-                body: reviewForm.body,
-              })
-              setReviewForm({ rating: 5, title: '', body: '' })
-              setReviewMsg('Cảm ơn bạn đã đánh giá!')
+              setReviewError('')
+              const title = reviewForm.title.trim()
+              const body = reviewForm.body.trim()
+              const comment = [title, body].filter(Boolean).join('\n\n')
+              try {
+                await postReview({
+                  productId: Number(id),
+                  rating: reviewForm.rating,
+                  comment,
+                })
+                setReviewForm({ rating: 5, title: '', body: '' })
+                setReviewMsg('Cảm ơn bạn đã đánh giá!')
+                const list = await fetchProductReviews(id)
+                setReviews(Array.isArray(list) ? list : [])
+              } catch (err) {
+                setReviewError(err instanceof Error ? err.message : 'Gửi đánh giá thất bại')
+              }
             }}
           >
             <label>
@@ -193,20 +235,35 @@ export default function ProductDetail() {
           </p>
         )}
 
-        {reviews.length ? (
+        {reviewsLoading ? (
+          <p className="muted" style={{ marginTop: 14 }}>
+            Đang tải đánh giá…
+          </p>
+        ) : reviews.length ? (
           <div className="reviews-stack" style={{ marginTop: 14 }}>
-            {reviews.map((r) => (
-              <div key={r.id} className="review-row">
-                <div className="review-head">
-                  <strong>{r.title || 'Đánh giá'}</strong>
-                  <span className="muted small">
-                    {r.username} · {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(new Date(r.createdAt))}
-                  </span>
+            {reviews.map((r) => {
+              const { title, body } = parseReviewComment(r.comment)
+              return (
+                <div key={r.id} className="review-row">
+                  <div className="review-head">
+                    <strong>{title || 'Đánh giá'}</strong>
+                    <span className="muted small">
+                      {r.username} ·{' '}
+                      {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(new Date(r.createdAt))}
+                    </span>
+                  </div>
+                  <div className="muted small">
+                    {'★'.repeat(r.rating || 0)}
+                    {'☆'.repeat(5 - (r.rating || 0))}
+                  </div>
+                  {body ? (
+                    <p style={{ marginTop: 8, marginBottom: 0 }}>
+                      {body}
+                    </p>
+                  ) : null}
                 </div>
-                <div className="muted small">{'★'.repeat(r.rating || 0)}{'☆'.repeat(5 - (r.rating || 0))}</div>
-                {r.body ? <p style={{ marginTop: 8, marginBottom: 0 }}>{r.body}</p> : null}
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : null}
       </article>
