@@ -9,10 +9,12 @@ import com.oop.ecommerce.repository.AuditLogRepository;
 import com.oop.ecommerce.repository.ProductInventoryHistoryRepository;
 import com.oop.ecommerce.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class OrderInventoryService {
 
@@ -55,12 +57,16 @@ public class OrderInventoryService {
             emailService.sendPurchaseConfirmation(order.getUser().getEmail(), savedProduct, qty);
         }
 
-        auditLogRepository.save(AuditLog.builder()
-                .user(order.getUser())
-                .entityName("Order")
-                .entityId(order.getId())
-                .action("PAYMENT_FULFILLED")
-                .newValues("{\"orderId\":%d,\"method\":\"%s\"}".formatted(order.getId(), order.getPaymentMethod()))
-                .build());
+        try {
+            auditLogRepository.save(AuditLog.builder()
+                    .user(order.getUser())
+                    .entityName("Order")
+                    .entityId(order.getId())
+                    .action("PAYMENT_FULFILLED")
+                    .newValues("{\"orderId\":%d,\"method\":\"%s\"}".formatted(order.getId(), order.getPaymentMethod()))
+                    .build());
+        } catch (Exception e) {
+            log.warn("Unable to persist audit log for order {}: {}", order.getId(), e.getMessage(), e);
+        }
     }
 }
