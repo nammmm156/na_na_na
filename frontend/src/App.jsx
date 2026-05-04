@@ -7,6 +7,7 @@ import { useAuth } from './context/AuthContext.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Cart from './pages/Cart.jsx'
 import Checkout from './pages/Checkout.jsx'
+import PaymentSuccess from './pages/PaymentSuccess.jsx'
 import Login from './pages/Login.jsx'
 import Orders from './pages/Orders.jsx'
 import ProductDetail from './pages/ProductDetail.jsx'
@@ -65,6 +66,14 @@ function Layout() {
             element={
               <ProtectedRoute>
                 <Checkout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment/success"
+            element={
+              <ProtectedRoute>
+                <PaymentSuccess />
               </ProtectedRoute>
             }
           />

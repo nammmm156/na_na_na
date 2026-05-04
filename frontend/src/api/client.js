@@ -22,7 +22,11 @@ export async function apiFetch(path, options = {}) {
     headers.set('Content-Type', 'application/json')
   }
   const token = getToken()
-  if (token) headers.set('Authorization', `Bearer ${token}`)
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  } else {
+    console.warn(`[API] No token found for request to ${path}`)
+  }
 
   const res = await fetch(`${apiBase()}${path}`, { ...options, headers })
   return res

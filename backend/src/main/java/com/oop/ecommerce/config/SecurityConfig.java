@@ -37,7 +37,9 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/payment/webhook").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/test/auth").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/products/statistics").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll() // publicly view products
                 .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
