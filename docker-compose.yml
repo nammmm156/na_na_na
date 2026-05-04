@@ -24,6 +24,8 @@ services:
     container_name: ecommerce-backend
     network_mode: "host"
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: psql
       POSTGRES_HOST: 127.0.0.1

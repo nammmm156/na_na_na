@@ -52,10 +52,16 @@ export default function Dashboard() {
     setLoading(true)
     setError('')
     try {
+<<<<<<< HEAD
       const res = await apiFetch('/api/products/statistics')
       if (!res.ok) {
         const text = await res.text()
         throw new Error(text || 'Không tải được dashboard')
+=======
+      const res = await apiFetch('/api/admin/dashboard-stats?days=30')
+      if (res.ok) {
+        setStats(await res.json())
+>>>>>>> payos_feature
       }
       setStats(await res.json())
     } catch (e) {
@@ -70,6 +76,7 @@ export default function Dashboard() {
     loadStats()
   }, [loadStats])
 
+<<<<<<< HEAD
   useEffect(() => {
     const onStatsUpdated = () => loadStats()
     window.addEventListener('shop:stats-updated', onStatsUpdated)
@@ -78,6 +85,10 @@ export default function Dashboard() {
 
   const monthlyRevenue = useMemo(() => buildMonthlyRevenueSeries(stats), [stats])
   const maxMonthlyValue = useMemo(() => Math.max(1, ...monthlyRevenue.map((p) => p.value)), [monthlyRevenue])
+=======
+  const dailyRevenue = Array.isArray(stats?.dailyRevenue) ? stats.dailyRevenue : []
+  const maxDailyRevenue = dailyRevenue.reduce((max, p) => Math.max(max, Number(p?.revenue || 0)), 0)
+>>>>>>> payos_feature
   const salesByCategory = Array.isArray(stats?.salesByCategory) ? stats.salesByCategory : []
 
   if (loading) {
@@ -100,6 +111,7 @@ export default function Dashboard() {
       {error ? <div className="alert alert-error">{error}</div> : null}
 
       <div className="stats-grid">
+<<<<<<< HEAD
         <StatCard
           label="Revenue"
           value={toCurrency(toNumber(stats?.totalRevenue))}
@@ -112,21 +124,38 @@ export default function Dashboard() {
           value={toNumber(stats?.totalItemsSold)}
           trend={formatTrend(stats?.itemsSoldGrowthPercent)}
         />
+=======
+        <StatCard label="Revenue" value={toCurrency(stats?.totalRevenue || 0)} trend="" />
+        <StatCard label="Products" value={stats?.totalProducts || 0} trend="" />
+        <StatCard label="Items in Stock" value={stats?.itemsInStock || 0} trend="" />
+        <StatCard label="Items Sold" value={stats?.itemsSold || 0} trend="" />
+>>>>>>> payos_feature
       </div>
 
       <div className="charts-grid">
         <article className="card chart-card">
           <h3>Revenue Overview</h3>
           <div className="line-chart">
+<<<<<<< HEAD
             {monthlyRevenue.map((point, idx) => (
               <div key={point.monthKey} className="line-item">
                 <div
                   className="line-bar"
                   style={{ height: `${(point.value / maxMonthlyValue) * 180}px` }}
                   title={`${point.month}: ${toCurrency(point.value)}`}
+=======
+            {dailyRevenue.map((point, idx) => (
+              <div key={point.date} className="line-item">
+                <div
+                  className="line-bar"
+                  style={{
+                    height: `${maxDailyRevenue > 0 ? (Number(point.revenue || 0) / maxDailyRevenue) * 180 : 0}px`,
+                  }}
+                  title={`${formatDateLabel(point.date)}: ${toCurrency(point.revenue || 0)}`}
+>>>>>>> payos_feature
                 />
-                <span>{point.month}</span>
-                {idx < monthlyRevenue.length - 1 ? <i className="line-dot" /> : null}
+                <span>{formatDateLabel(point.date)}</span>
+                {idx < dailyRevenue.length - 1 ? <i className="line-dot" /> : null}
               </div>
             ))}
           </div>
@@ -135,6 +164,7 @@ export default function Dashboard() {
         <article className="card chart-card">
           <h3>Sales by Category</h3>
           <div className="bar-chart">
+<<<<<<< HEAD
             {salesByCategory.length === 0 ? (
               <p className="muted">Chưa có dữ liệu bán hàng theo danh mục.</p>
             ) : (
@@ -151,6 +181,17 @@ export default function Dashboard() {
                 )
               })
             )}
+=======
+            {salesByCategory.map((item) => (
+              <div key={item.category} className="bar-row">
+                <span>{item.category}</span>
+                <div className="bar-track">
+                  <div className="bar-fill" style={{ width: `${Number(item.percent || 0)}%` }} />
+                </div>
+                <strong>{Number(item.percent || 0)}%</strong>
+              </div>
+            ))}
+>>>>>>> payos_feature
           </div>
         </article>
       </div>
@@ -172,4 +213,12 @@ function toCurrency(value) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(
     value,
   )
+}
+
+function formatDateLabel(isoDate) {
+  if (!isoDate) return ''
+  // isoDate expected: yyyy-MM-dd
+  const [y, m, d] = String(isoDate).split('-')
+  if (!y || !m || !d) return String(isoDate)
+  return `${d}/${m}`
 }

@@ -21,7 +21,7 @@ export default function Orders() {
       <header className="page-header compact">
         <div>
           <h2>Lịch sử mua hàng</h2>
-          <p className="muted">Các đơn hàng được tạo từ trang thanh toán (frontend-only).</p>
+          <p className="muted">Đơn từ thanh toán (backend + cục bộ trình duyệt).</p>
         </div>
         <div className="header-actions">
           <Link to="/cart" className="btn btn-secondary btn-sm">
@@ -46,7 +46,10 @@ export default function Orders() {
       ) : (
         <div className="orders-stack">
           {orders.map((o) => (
-            <article key={o.id} className={`card order-card${highlightOrderId === o.id ? ' highlight' : ''}`}>
+            <article
+              key={o.id}
+              className={`card order-card${String(highlightOrderId) === String(o.id) ? ' highlight' : ''}`}
+            >
               <header className="order-head">
                 <div>
                   <div className="muted small">Mã đơn</div>

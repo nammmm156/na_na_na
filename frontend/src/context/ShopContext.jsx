@@ -28,7 +28,6 @@ function readState(username) {
     },
     orders: [],
     returns: [],
-    reviewsByProductId: {},
   }
   return safeJsonParse(localStorage.getItem(storageKey(username)), initial)
 }
@@ -133,16 +132,18 @@ function reducer(state, action) {
       return { ...state, orders: [order, ...state.orders] }
     }
 
+    /** Replace or prepend an order synced from the API (same id overrides local copy). */
+    case 'order/mergeServer': {
+      const order = action.order
+      if (!order || order.id == null) return state
+      const oid = String(order.id)
+      const rest = state.orders.filter((o) => String(o.id) !== oid)
+      return { ...state, orders: [order, ...rest] }
+    }
+
     case 'return/create': {
       const ret = action.returnRequest
       return { ...state, returns: [ret, ...state.returns] }
-    }
-
-    case 'review/add': {
-      const { productId, review } = action
-      const current = state.reviewsByProductId[productId] || []
-      const next = { ...state.reviewsByProductId, [productId]: [review, ...current] }
-      return { ...state, reviewsByProductId: next }
     }
 
     default:
@@ -178,6 +179,9 @@ export function ShopProvider({ username, children }) {
   const setVoucherCode = useCallback((code) => act({ type: 'cart/setVoucherCode', code }), [act])
   const applyVoucher = useCallback(() => act({ type: 'cart/applyVoucher' }), [act])
 
+  const mergeServerOrder = useCallback((order) => act({ type: 'order/mergeServer', order }), [act])
+
+  /** Local-only simulated order used by demos; server checkout uses mergeServerOrder. */
   const createOrder = useCallback(
     ({ items, shippingAddress, paymentMethod, note }) => {
       const orderSubtotal = calcSubtotal(items)
@@ -221,29 +225,12 @@ export function ShopProvider({ username, children }) {
     [act],
   )
 
-  const addReview = useCallback(
-    ({ productId, username: reviewer, rating, title, body }) => {
-      const review = {
-        id: uid(),
-        createdAt: new Date().toISOString(),
-        username: reviewer || 'Ẩn danh',
-        rating: Math.min(5, Math.max(1, Number(rating || 5))),
-        title: title || '',
-        body: body || '',
-      }
-      act({ type: 'review/add', productId, review })
-      return review
-    },
-    [act],
-  )
-
   const value = useMemo(
     () => ({
       vouchers: VOUCHERS,
       cart: state.cart,
       orders: state.orders,
       returns: state.returns,
-      reviewsByProductId: state.reviewsByProductId,
 
       cartItemsCount,
       pricing: {
@@ -264,8 +251,8 @@ export function ShopProvider({ username, children }) {
       applyVoucher,
 
       createOrder,
+      mergeServerOrder,
       createReturnRequest,
-      addReview,
     }),
     [
       state,
@@ -280,8 +267,8 @@ export function ShopProvider({ username, children }) {
       setVoucherCode,
       applyVoucher,
       createOrder,
+      mergeServerOrder,
       createReturnRequest,
-      addReview,
     ],
   )
 
