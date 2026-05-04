@@ -132,6 +132,15 @@ function reducer(state, action) {
       return { ...state, orders: [order, ...state.orders] }
     }
 
+    /** Replace or prepend an order synced from the API (same id overrides local copy). */
+    case 'order/mergeServer': {
+      const order = action.order
+      if (!order || order.id == null) return state
+      const oid = String(order.id)
+      const rest = state.orders.filter((o) => String(o.id) !== oid)
+      return { ...state, orders: [order, ...rest] }
+    }
+
     case 'return/create': {
       const ret = action.returnRequest
       return { ...state, returns: [ret, ...state.returns] }
@@ -170,6 +179,9 @@ export function ShopProvider({ username, children }) {
   const setVoucherCode = useCallback((code) => act({ type: 'cart/setVoucherCode', code }), [act])
   const applyVoucher = useCallback(() => act({ type: 'cart/applyVoucher' }), [act])
 
+  const mergeServerOrder = useCallback((order) => act({ type: 'order/mergeServer', order }), [act])
+
+  /** Local-only simulated order used by demos; server checkout uses mergeServerOrder. */
   const createOrder = useCallback(
     ({ items, shippingAddress, paymentMethod, note }) => {
       const orderSubtotal = calcSubtotal(items)
@@ -239,6 +251,7 @@ export function ShopProvider({ username, children }) {
       applyVoucher,
 
       createOrder,
+      mergeServerOrder,
       createReturnRequest,
     }),
     [
@@ -254,6 +267,7 @@ export function ShopProvider({ username, children }) {
       setVoucherCode,
       applyVoucher,
       createOrder,
+      mergeServerOrder,
       createReturnRequest,
     ],
   )

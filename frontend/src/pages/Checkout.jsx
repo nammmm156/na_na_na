@@ -1,9 +1,20 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { apiFetch } from '../api/client.js'
+import { postOrder } from '../api/orders.js'
+import { postPayosCreateLink } from '../api/payment.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useShop } from '../context/ShopContext.jsx'
 import { formatPrice } from '../utils/format.js'
+import { mapServerOrderToShop } from '../utils/orderMap.js'
+
+async function parseJsonOrThrow(res) {
+  const text = await res.text()
+  if (!res.ok) {
+    throw new Error(text || `Lỗi máy chủ (${res.status})`)
+  }
+  if (!text) return null
+  return JSON.parse(text)
+}
 
 function normalizeItems(items) {
   return (items || [])
@@ -21,7 +32,7 @@ export default function Checkout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
-  const { cart, pricing, createOrder, clearCart } = useShop()
+  const { cart, pricing, mergeServerOrder, clearCart } = useShop()
 
   const buyNowItems = useMemo(() => {
     const st = location.state
@@ -66,33 +77,53 @@ export default function Checkout() {
     }
 
     try {
-      // 1. Call Backend API to update stock and trigger email
-      for (const item of items) {
-        const res = await apiFetch(`/api/products/${item.productId}/buy?quantity=${item.quantity}`, {
-          method: 'POST',
-        })
-        if (!res.ok) {
-          const errText = await res.text()
-          throw new Error(`Lỗi mua ${item.name}: ${errText}`)
-        }
-      }
-
-      // 2. Save order to client-side history
-      const order = createOrder({
-        items,
-        shippingAddress,
+      const payload = {
+        items: items.map((it) => ({
+          productId: it.productId,
+          quantity: it.quantity,
+        })),
+        shippingAddress: {
+          fullName: shippingAddress.fullName,
+          phone: shippingAddress.phone,
+          addressLine: shippingAddress.addressLine,
+          city: shippingAddress.city || '',
+        },
         paymentMethod,
         note,
-      })
+      }
 
+      if (!isBuyNow && cart.voucher?.code) {
+        payload.voucherCode = cart.voucher.code
+      }
+
+      const created = await parseJsonOrThrow(await postOrder(payload))
+
+      if (paymentMethod === 'PAYOS_NAPAS247') {
+        console.log('[Checkout] Creating PayOS payment link for order:', created.id)
+        const linkRes = await postPayosCreateLink(created.id)
+        console.log('[Checkout] PayOS link response status:', linkRes.status)
+        if (!linkRes.ok) {
+          const errorText = await linkRes.text()
+          console.error('[Checkout] PayOS link creation failed:', errorText)
+          throw new Error(`Không thể tạo link thanh toán: ${errorText}`)
+        }
+        const linkBody = await parseJsonOrThrow(linkRes)
+        const url = linkBody?.checkoutUrl
+        if (!url) {
+          throw new Error('Máy chủ không trả về link thanh toán PayOS.')
+        }
+        if (!isBuyNow) clearCart()
+        window.location.href = url
+        return
+      }
+
+      mergeServerOrder(mapServerOrderToShop(created))
       if (!isBuyNow) clearCart()
-      setSuccess(`Đặt hàng thành công. Mã đơn: ${order.id}`)
-      
-      // Short delay so user can read success message before redirect
-      setTimeout(() => {
-        navigate('/orders', { replace: true, state: { highlightOrderId: order.id } })
-      }, 1000)
-      
+      const oid = String(created.id)
+      setSuccess(`Đặt hàng thành công. Mã đơn: ${oid}`)
+      window.setTimeout(() => {
+        navigate('/orders', { replace: true, state: { highlightOrderId: oid } })
+      }, 900)
     } catch (err) {
       setError(err.message || 'Có lỗi xảy ra khi thanh toán.')
     }
@@ -164,6 +195,7 @@ export default function Checkout() {
                   <option value="COD">COD (nhận hàng trả tiền)</option>
                   <option value="CARD">Thẻ (mô phỏng)</option>
                   <option value="BANK">Chuyển khoản (mô phỏng)</option>
+                  <option value="PAYOS_NAPAS247">Thanh toán Napas 247 (PayOS / VietQR)</option>
                 </select>
               </label>
               <label className="span-2">
