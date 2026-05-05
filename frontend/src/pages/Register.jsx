@@ -50,7 +50,7 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-card">
         <h1>Create account</h1>
-        <p className="muted">Join QuanlyShop today</p>
+        <p className="muted">Tham gia HTShoes hôm nay</p>
         <form onSubmit={handleSubmit} className="form-stack">
           {error ? <div className="alert alert-error">{error}</div> : null}
           {success ? <div className="alert alert-success">{success}</div> : null}

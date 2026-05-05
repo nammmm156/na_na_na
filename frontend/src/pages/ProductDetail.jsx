@@ -88,7 +88,7 @@ export default function ProductDetail() {
     return (
       <section className="detail-page">
         <article className="empty-state">
-          <h2>Khong tim thay san pham</h2>
+          <h2>Không tìm thấy sản phẩm</h2>
           <Link to="/" className="btn btn-primary">
             Quay lai danh sach
           </Link>
@@ -109,7 +109,7 @@ export default function ProductDetail() {
         <div className="detail-content">
           <p className="product-category">{product.category || 'General'}</p>
           <h1>{product.name}</h1>
-          <p className="detail-description">{product.description || 'San pham chat luong cao, giao hang toan quoc.'}</p>
+          <p className="detail-description">{product.description || 'Sản phẩm chất lượng cao, giao hàng toàn quốc.'}</p>
           <strong className="detail-price">{formatPrice(product.price)}</strong>
           <div className="detail-actions">
             {isAuthenticated && !isAdmin ? (
@@ -135,7 +135,7 @@ export default function ProductDetail() {
               </Link>
             )}
             <Link to="/" className="btn btn-secondary">
-              Tiep tuc mua sam
+              Tiếp tục mua sắm
             </Link>
           </div>
         </div>

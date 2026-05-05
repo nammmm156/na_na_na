@@ -253,6 +253,82 @@ select:focus {
   border-radius: 10px;
 }
 
+/* ─── Shoe category bar (Products) — cùng tone với card / nav ─── */
+.shoe-category-bar {
+  background: linear-gradient(180deg, rgba(20, 33, 62, 0.88), rgba(17, 27, 52, 0.94));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.shoe-category-inner {
+  padding: 0.5rem 0.85rem;
+}
+
+.shoe-category-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.2rem 0.35rem;
+}
+
+.shoe-category-list > li {
+  display: flex;
+  align-items: center;
+}
+
+.shoe-nav-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.shoe-nav-btn:hover,
+.shoe-nav-btn:focus-visible {
+  color: var(--text);
+  background: rgba(99, 102, 241, 0.12);
+  outline: none;
+}
+
+.shoe-nav-btn.active {
+  color: var(--text);
+  background: rgba(99, 102, 241, 0.18);
+  font-weight: 600;
+}
+
+.product-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.product-search {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+}
+
+.product-search input {
+  margin: 0;
+}
+
 /* ─── Product Grid ─── */
 .products-grid {
   display: grid;

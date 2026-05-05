@@ -16,7 +16,7 @@ export default function Navbar() {
     <header className="topbar">
       <div className="container topbar-inner">
         <NavLink to="/" className="brand">
-          QuanlyShop
+          HTShoes
         </NavLink>
 
         <nav className="nav-links">
