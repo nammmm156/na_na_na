@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
 import { fetchProductReviews, postReview } from '../api/reviews.js'
+import ShoeSizePicker from '../components/ShoeSizePicker.jsx'
+import { parseAllowedShoeSize } from '../constants/shoeSizes.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useShop } from '../context/ShopContext.jsx'
 import { formatPrice } from '../utils/format.js'
@@ -26,6 +28,13 @@ export default function ProductDetail() {
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', body: '' })
   const [reviewMsg, setReviewMsg] = useState('')
   const [reviewError, setReviewError] = useState('')
+  const [shoeSize, setShoeSize] = useState(null)
+  const [sizeError, setSizeError] = useState('')
+
+  useEffect(() => {
+    setShoeSize(null)
+    setSizeError('')
+  }, [id])
 
   useEffect(() => {
     let mounted = true
@@ -111,20 +120,58 @@ export default function ProductDetail() {
           <h1>{product.name}</h1>
           <p className="detail-description">{product.description || 'Sản phẩm chất lượng cao, giao hàng toàn quốc.'}</p>
           <strong className="detail-price">{formatPrice(product.price)}</strong>
+          {isAuthenticated && !isAdmin ? (
+            <>
+              <ShoeSizePicker
+                value={shoeSize}
+                onChange={(s) => {
+                  setShoeSize(s)
+                  setSizeError('')
+                }}
+                labelledById={`detail-size-${id}`}
+              />
+              {sizeError ? (
+                <div className="alert alert-error" style={{ marginTop: 10 }}>
+                  {sizeError}
+                </div>
+              ) : null}
+            </>
+          ) : null}
           <div className="detail-actions">
             {isAuthenticated && !isAdmin ? (
               <>
-                <button type="button" className="btn btn-secondary" onClick={() => addToCart(product, 1)}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    const sz = parseAllowedShoeSize(shoeSize)
+                    if (sz == null) {
+                      setSizeError('Vui lòng chọn size giày (39–42) trước khi thêm vào giỏ.')
+                      return
+                    }
+                    setSizeError('')
+                    addToCart(product, 1, { shoeSize: sz })
+                  }}
+                >
                   + Thêm vào giỏ
                 </button>
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() =>
+                  onClick={() => {
+                    const sz = parseAllowedShoeSize(shoeSize)
+                    if (sz == null) {
+                      setSizeError('Vui lòng chọn size giày (39–42) trước khi mua.')
+                      return
+                    }
+                    setSizeError('')
                     navigate('/checkout', {
-                      state: { mode: 'buyNow', items: [{ ...product, productId: product.id, quantity: 1 }] },
+                      state: {
+                        mode: 'buyNow',
+                        items: [{ ...product, productId: product.id, quantity: 1, shoeSize: sz }],
+                      },
                     })
-                  }
+                  }}
                 >
                   🛒 Mua ngay
                 </button>

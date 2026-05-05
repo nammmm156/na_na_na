@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,19 +45,24 @@ public class OrderService {
         }
 
         Map<Long, Product> productsById = new LinkedHashMap<>();
+        Map<Long, Integer> qtyNeededByProduct = new HashMap<>();
         long subtotal = 0;
 
         for (CreateOrderItemDto line : request.getItems()) {
             Product p = productRepository.findById(line.getProductId())
                     .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại #" + line.getProductId()));
 
-            int stock = p.getStockQuantity() == null ? 0 : p.getStockQuantity();
-            if (stock < line.getQuantity()) {
-                throw new IllegalArgumentException("Không đủ tồn kho: " + p.getName());
-            }
-
+            qtyNeededByProduct.merge(p.getId(), line.getQuantity(), Integer::sum);
             productsById.put(p.getId(), p);
             subtotal += CheckoutPricing.lineTotalRoundedVnd(p.getPrice(), line.getQuantity());
+        }
+
+        for (Map.Entry<Long, Integer> need : qtyNeededByProduct.entrySet()) {
+            Product p = productsById.get(need.getKey());
+            int stock = p.getStockQuantity() == null ? 0 : p.getStockQuantity();
+            if (stock < need.getValue()) {
+                throw new IllegalArgumentException("Không đủ tồn kho: " + p.getName());
+            }
         }
 
         String appliedVoucher = request.getVoucherCode();

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useShop } from '../context/ShopContext.jsx'
 
@@ -10,19 +10,31 @@ function formatDate(iso) {
   }
 }
 
+function orderLineKey(it) {
+  return `${it.productId}|${it.shoeSize ?? ''}`
+}
+
 export default function Returns() {
   const { orders, returns, createReturnRequest } = useShop()
   const location = useLocation()
 
   const initialOrderId = location.state?.orderId || ''
   const [orderId, setOrderId] = useState(initialOrderId)
-  const [productId, setProductId] = useState('')
+  const [lineKey, setLineKey] = useState('')
   const [reason, setReason] = useState('Không phù hợp')
   const [message, setMessage] = useState('')
 
   const selectedOrder = useMemo(() => orders.find((o) => o.id === orderId) || null, [orders, orderId])
   const orderItems = selectedOrder?.items || []
-  const selectedItem = useMemo(() => orderItems.find((i) => String(i.productId) === String(productId)) || null, [orderItems, productId])
+
+  const selectedItem = useMemo(
+    () => orderItems.find((i) => orderLineKey(i) === lineKey) || null,
+    [orderItems, lineKey],
+  )
+
+  useEffect(() => {
+    setLineKey('')
+  }, [orderId])
 
   function submit(e) {
     e.preventDefault()
@@ -43,7 +55,7 @@ export default function Returns() {
     })
 
     setMessage(`Đã tạo yêu cầu trả hàng: ${ret.id}`)
-    setProductId('')
+    setLineKey('')
   }
 
   return (
@@ -84,11 +96,12 @@ export default function Returns() {
 
             <label className="span-2">
               Chọn sản phẩm *
-              <select value={productId} onChange={(e) => setProductId(e.target.value)} required disabled={!orderId}>
+              <select value={lineKey} onChange={(e) => setLineKey(e.target.value)} required disabled={!orderId}>
                 <option value="">-- Chọn --</option>
                 {orderItems.map((it) => (
-                  <option key={it.productId} value={String(it.productId)}>
-                    {it.name} × {it.quantity}
+                  <option key={orderLineKey(it)} value={orderLineKey(it)}>
+                    {it.name}
+                    {it.shoeSize != null ? ` · Size ${it.shoeSize}` : ''} × {it.quantity}
                   </option>
                 ))}
               </select>
@@ -107,6 +120,12 @@ export default function Returns() {
             {selectedItem ? (
               <div className="span-2 alert" style={{ border: '1px solid rgba(34,50,87,0.5)' }}>
                 Sản phẩm: <strong>{selectedItem.name}</strong>
+                {selectedItem.shoeSize != null ? (
+                  <>
+                    {' '}
+                    · Size <strong>{selectedItem.shoeSize}</strong>
+                  </>
+                ) : null}
               </div>
             ) : null}
 

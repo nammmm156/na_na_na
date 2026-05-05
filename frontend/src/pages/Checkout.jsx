@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { postOrder } from '../api/orders.js'
 import { postPayosCreateLink } from '../api/payment.js'
+import { SHOE_SIZES, parseAllowedShoeSize } from '../constants/shoeSizes.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useShop } from '../context/ShopContext.jsx'
 import { formatPrice } from '../utils/format.js'
@@ -24,6 +25,7 @@ function normalizeItems(items) {
       price: Number(it.price || 0),
       imageUrl: it.imageUrl || '',
       quantity: Math.max(1, Number(it.quantity || 1)),
+      shoeSize: parseAllowedShoeSize(it.shoeSize),
     }))
     .filter((it) => it.productId != null)
 }
@@ -34,14 +36,40 @@ export default function Checkout() {
   const { user } = useAuth()
   const { cart, pricing, mergeServerOrder, clearCart } = useShop()
 
-  const buyNowItems = useMemo(() => {
+  /** Luôn chuẩn hoá (trước đây giỏ hàng gửi thẳng cart.items → shoeSize lệ kiểu gây lỗi API). */
+  const normalizedLines = useMemo(() => {
     const st = location.state
-    if (!st || st.mode !== 'buyNow') return null
-    return normalizeItems(st.items)
-  }, [location.state])
+    if (st?.mode === 'buyNow' && Array.isArray(st.items)) {
+      return normalizeItems(st.items)
+    }
+    return normalizeItems(cart.items)
+  }, [location.state, cart.items])
 
-  const items = buyNowItems || cart.items
-  const isBuyNow = Boolean(buyNowItems)
+  const isBuyNow = Boolean(location.state?.mode === 'buyNow' && Array.isArray(location.state?.items))
+
+  const baseLines = useMemo(
+    () =>
+      normalizedLines.map((it) => ({
+        ...it,
+        shoeSize: parseAllowedShoeSize(it.shoeSize),
+      })),
+    [normalizedLines],
+  )
+
+  const [sizeByIndex, setSizeByIndex] = useState({})
+
+  useEffect(() => {
+    setSizeByIndex({})
+  }, [normalizedLines])
+
+  const lines = useMemo(
+    () =>
+      baseLines.map((it, idx) => ({
+        ...it,
+        shoeSize: Object.prototype.hasOwnProperty.call(sizeByIndex, idx) ? sizeByIndex[idx] : it.shoeSize,
+      })),
+    [baseLines, sizeByIndex],
+  )
 
   const [shippingAddress, setShippingAddress] = useState({
     fullName: user?.username || '',
@@ -55,18 +83,18 @@ export default function Checkout() {
   const [success, setSuccess] = useState('')
 
   const totals = useMemo(() => {
-    const subtotal = items.reduce((s, it) => s + it.price * it.quantity, 0)
+    const subtotal = lines.reduce((s, it) => s + it.price * it.quantity, 0)
     const discount = isBuyNow ? 0 : pricing.discount
     const total = Math.max(0, subtotal - discount)
     return { subtotal, discount, total }
-  }, [items, pricing.discount, isBuyNow])
+  }, [lines, pricing.discount, isBuyNow])
 
   async function placeOrder(e) {
     e.preventDefault()
     setError('')
     setSuccess('')
 
-    if (!items.length) {
+    if (!lines.length) {
       setError('Không có sản phẩm để thanh toán.')
       return
     }
@@ -76,11 +104,18 @@ export default function Checkout() {
       return
     }
 
+    const unresolved = lines.findIndex((it) => parseAllowedShoeSize(it.shoeSize) == null)
+    if (unresolved >= 0) {
+      setError('Vui lòng chọn size giày (39–42) cho mỗi sản phẩm trước khi đặt hàng.')
+      return
+    }
+
     try {
       const payload = {
-        items: items.map((it) => ({
+        items: lines.map((it) => ({
           productId: it.productId,
           quantity: it.quantity,
+          shoeSize: parseAllowedShoeSize(it.shoeSize),
         })),
         shippingAddress: {
           fullName: shippingAddress.fullName,
@@ -146,7 +181,7 @@ export default function Checkout() {
       {error ? <div className="alert alert-error">{error}</div> : null}
       {success ? <div className="alert alert-success">{success}</div> : null}
 
-      {items.length === 0 ? (
+      {lines.length === 0 ? (
         <div className="empty-state">
           <h3>Không có sản phẩm</h3>
           <p>Giỏ hàng trống. Hãy thêm sản phẩm trước khi thanh toán.</p>
@@ -217,8 +252,8 @@ export default function Checkout() {
           <aside className="card checkout-summary">
             <h3>Đơn hàng</h3>
             <div className="checkout-items">
-              {items.map((it) => (
-                <div key={it.productId} className="checkout-row">
+              {lines.map((it, idx) => (
+                <div key={`${it.productId}-${idx}`} className="checkout-row checkout-row-stack">
                   <div className="checkout-prod">
                     <img
                       className="cart-thumb"
@@ -228,8 +263,33 @@ export default function Checkout() {
                       }
                       alt={it.name}
                     />
-                    <div>
+                    <div className="checkout-prod-meta">
                       <div className="cart-name">{it.name}</div>
+                      <label className="checkout-size-field muted small">
+                        Size (EU)
+                        <select
+                          aria-required="true"
+                          value={
+                            it.shoeSize != null && SHOE_SIZES.includes(Number(it.shoeSize))
+                              ? String(it.shoeSize)
+                              : ''
+                          }
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setSizeByIndex((prev) => ({
+                              ...prev,
+                              [idx]: v === '' ? null : Number(v),
+                            }))
+                          }}
+                        >
+                          <option value="">-- Chọn size --</option>
+                          {SHOE_SIZES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <div className="muted small">
                         {formatPrice(it.price)} × {it.quantity}
                       </div>

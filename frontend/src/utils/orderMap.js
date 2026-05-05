@@ -14,6 +14,7 @@ export function mapServerOrderToShop(o) {
       price: Number(l.unitPrice || 0),
       imageUrl: '',
       quantity: l.quantity ?? 1,
+      shoeSize: l.shoeSize != null ? Number(l.shoeSize) : null,
     })),
     pricing: {
       subtotal: Number(o.subtotalAmount || 0),

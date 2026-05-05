@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react'
+import { parseAllowedShoeSize } from '../constants/shoeSizes.js'
 import { formatPrice } from '../utils/format.js'
 
 const ShopContext = createContext(null)
@@ -59,6 +60,15 @@ function normalizeProduct(product) {
   }
 }
 
+function normalizeShoeSize(v) {
+  return parseAllowedShoeSize(v)
+}
+
+function cartLineMatches(item, productId, shoeSize) {
+  if (Number(item.productId) !== Number(productId)) return false
+  return normalizeShoeSize(item.shoeSize) === normalizeShoeSize(shoeSize)
+}
+
 function findVoucher(code) {
   if (!code) return null
   const normalized = String(code).trim().toUpperCase()
@@ -86,8 +96,10 @@ function reducer(state, action) {
       const p = normalizeProduct(action.product)
       if (!p) return state
       const qty = Math.max(1, Number(action.quantity || 1))
+      const shoeSize = normalizeShoeSize(action.shoeSize)
+      if (shoeSize == null) return state
       const items = [...state.cart.items]
-      const idx = items.findIndex((i) => i.productId === p.id)
+      const idx = items.findIndex((i) => cartLineMatches(i, p.id, shoeSize))
       if (idx >= 0) {
         const nextQty = items[idx].quantity + qty
         items[idx] = { ...items[idx], quantity: nextQty }
@@ -98,20 +110,21 @@ function reducer(state, action) {
           price: p.price,
           imageUrl: p.imageUrl,
           quantity: qty,
+          shoeSize,
         })
       }
       return { ...state, cart: { ...state.cart, items } }
     }
 
     case 'cart/remove': {
-      const items = state.cart.items.filter((i) => i.productId !== action.productId)
+      const items = state.cart.items.filter((i) => !cartLineMatches(i, action.productId, action.shoeSize))
       return { ...state, cart: { ...state.cart, items } }
     }
 
     case 'cart/setQty': {
       const qty = Number(action.quantity || 0)
       const items = state.cart.items
-        .map((i) => (i.productId === action.productId ? { ...i, quantity: qty } : i))
+        .map((i) => (cartLineMatches(i, action.productId, action.shoeSize) ? { ...i, quantity: qty } : i))
         .filter((i) => i.quantity > 0)
       return { ...state, cart: { ...state.cart, items } }
     }
@@ -171,9 +184,19 @@ export function ShopProvider({ username, children }) {
   const discount = calcDiscount(subtotal, state.cart.voucher)
   const total = Math.max(0, subtotal - discount)
 
-  const addToCart = useCallback((product, quantity = 1) => act({ type: 'cart/add', product, quantity }), [act])
-  const removeFromCart = useCallback((productId) => act({ type: 'cart/remove', productId }), [act])
-  const setQuantity = useCallback((productId, quantity) => act({ type: 'cart/setQty', productId, quantity }), [act])
+  const addToCart = useCallback(
+    (product, quantity = 1, options = {}) =>
+      act({ type: 'cart/add', product, quantity, shoeSize: options.shoeSize }),
+    [act],
+  )
+  const removeFromCart = useCallback(
+    (productId, shoeSize) => act({ type: 'cart/remove', productId, shoeSize }),
+    [act],
+  )
+  const setQuantity = useCallback(
+    (productId, quantity, shoeSize) => act({ type: 'cart/setQty', productId, quantity, shoeSize }),
+    [act],
+  )
   const clearCart = useCallback(() => act({ type: 'cart/clear' }), [act])
 
   const setVoucherCode = useCallback((code) => act({ type: 'cart/setVoucherCode', code }), [act])

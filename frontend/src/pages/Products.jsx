@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import { useShop } from '../context/ShopContext.jsx'
 
 const emptyForm = {
   name: '',
@@ -49,9 +48,7 @@ function productMatchesSearch(p, q) {
 }
 
 export default function Products() {
-  const navigate = useNavigate()
-  const { isAuthenticated, isAdmin } = useAuth()
-  const { addToCart } = useShop()
+  const { isAdmin } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -149,19 +146,6 @@ export default function Products() {
     } catch (err) {
       setError(err.message || 'Xóa thất bại')
     }
-  }
-
-  function handleAddToCart(product) {
-    addToCart(product, 1)
-  }
-
-  function handleBuyNow(product) {
-    navigate('/checkout', {
-      state: {
-        mode: 'buyNow',
-        items: [{ ...product, productId: product.id, quantity: 1 }],
-      },
-    })
   }
 
   const filteredItems = useMemo(
@@ -380,49 +364,24 @@ export default function Products() {
                     ) : null}
                   </div>
                 </div>
-                <div className="product-actions">
-                  {isAuthenticated && !isAdmin ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm btn-full"
-                        onClick={() => handleAddToCart(p)}
-                      >
-                        + Thêm vào giỏ
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm btn-full"
-                        onClick={() => handleBuyNow(p)}
-                      >
-                        🛒 Mua ngay
-                      </button>
-                    </>
-                  ) : null}
-                  {isAdmin ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm btn-full"
-                        onClick={() => startEdit(p)}
-                      >
-                        ✏️ Sửa
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm btn-full"
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        🗑️ Xóa
-                      </button>
-                    </>
-                  ) : null}
-                  {!isAuthenticated ? (
-                    <Link to="/login" className="btn btn-secondary btn-sm btn-full">
-                      Đăng nhập để mua
-                    </Link>
-                  ) : null}
-                </div>
+                {isAdmin ? (
+                  <div className="product-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm btn-full"
+                      onClick={() => startEdit(p)}
+                    >
+                      ✏️ Sửa
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm btn-full"
+                      onClick={() => handleDelete(p.id)}
+                    >
+                      🗑️ Xóa
+                    </button>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>

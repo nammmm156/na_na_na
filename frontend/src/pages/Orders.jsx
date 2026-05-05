@@ -71,8 +71,8 @@ export default function Orders() {
 
               <div className="order-body">
                 <div className="order-items">
-                  {(o.items || []).map((it) => (
-                    <div key={`${o.id}:${it.productId}`} className="order-item">
+                  {(o.items || []).map((it, idx) => (
+                    <div key={`${o.id}:${it.productId}:${it.shoeSize ?? ''}:${idx}`} className="order-item">
                       <div className="checkout-prod">
                         <img
                           className="cart-thumb"
@@ -85,6 +85,7 @@ export default function Orders() {
                         <div>
                           <div className="cart-name">{it.name}</div>
                           <div className="muted small">
+                            {it.shoeSize != null ? <>Size {it.shoeSize} · </> : null}
                             {formatPrice(it.price)} × {it.quantity}
                           </div>
                         </div>

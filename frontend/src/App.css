@@ -329,6 +329,73 @@ select:focus {
   margin: 0;
 }
 
+/* ─── Shoe size (EU) — dropdown ─── */
+.shoe-size-picker {
+  margin: 0.85rem 0;
+}
+
+.shoe-size-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  width: 100%;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.shoe-size-label {
+  font-size: 0.82rem;
+}
+
+.shoe-size-select,
+.checkout-size-field select {
+  width: 100%;
+  margin: 0;
+  font-weight: 600;
+}
+
+.shoe-size-picker--compact {
+  margin: 0.45rem 0 0.5rem;
+}
+
+.shoe-size-picker--compact .shoe-size-label {
+  font-size: 0.72rem;
+}
+
+.shoe-size-picker--compact .shoe-size-select {
+  padding: 0.38rem 0.55rem;
+  font-size: 0.84rem;
+}
+
+.checkout-prod-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.checkout-size-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.checkout-size-field select {
+  max-width: 120px;
+}
+
+.checkout-row-stack.checkout-row {
+  align-items: flex-start;
+}
+
+.checkout-row-stack.checkout-row > strong {
+  align-self: center;
+}
+
 /* ─── Product Grid ─── */
 .products-grid {
   display: grid;
