@@ -40,9 +40,14 @@ export default function Navbar() {
             </>
           ) : null}
           {isAdmin ? (
-            <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Dashboard
-            </NavLink>
+            <>
+              <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
+                Dashboard
+              </NavLink>
+              <NavLink to="/admin/vouchers" className={({ isActive }) => (isActive ? 'active' : '')}>
+                Voucher
+              </NavLink>
+            </>
           ) : null}
         </nav>
 

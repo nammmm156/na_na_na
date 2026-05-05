@@ -2,14 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { SHOE_SIZES } from '../constants/shoeSizes.js'
 
 const emptyForm = {
   name: '',
   description: '',
   price: '',
-  stockQuantity: '',
   category: '',
   imageUrl: '',
+  sizeQuantities: Object.fromEntries(SHOE_SIZES.map((s) => [s, '0'])),
 }
 
 const fallbackImage =
@@ -78,13 +79,16 @@ export default function Products() {
 
   function startEdit(p) {
     setEditingId(p.id)
+    const incoming = p.sizeQuantities && typeof p.sizeQuantities === 'object' ? p.sizeQuantities : {}
     setForm({
       name: p.name ?? '',
       description: p.description ?? '',
       price: p.price != null ? String(p.price) : '',
-      stockQuantity: p.stockQuantity != null ? String(p.stockQuantity) : '',
       category: p.category ?? '',
       imageUrl: p.imageUrl ?? '',
+      sizeQuantities: Object.fromEntries(
+        SHOE_SIZES.map((s) => [s, incoming[s] != null ? String(incoming[s]) : '0']),
+      ),
     })
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -106,13 +110,20 @@ export default function Products() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    const sizeQuantities = Object.fromEntries(
+      SHOE_SIZES.map((s) => {
+        const raw = form.sizeQuantities?.[s]
+        const n = raw === '' || raw == null ? 0 : parseInt(String(raw), 10)
+        return [s, Number.isFinite(n) && n > 0 ? n : 0]
+      }),
+    )
     const body = {
       name: form.name,
       description: form.description || null,
       price: form.price === '' ? null : Number(form.price),
-      stockQuantity: form.stockQuantity === '' ? null : parseInt(form.stockQuantity, 10),
       category: form.category || null,
       imageUrl: form.imageUrl || null,
+      sizeQuantities,
     }
     try {
       if (editingId) {
@@ -275,15 +286,27 @@ export default function Products() {
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
             </label>
-            <label>
-              Tồn kho
-              <input
-                type="number"
-                min="0"
-                value={form.stockQuantity}
-                onChange={(e) => setForm((f) => ({ ...f, stockQuantity: e.target.value }))}
-              />
-            </label>
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Tồn kho theo size (35–45)</div>
+              <div className="size-grid" style={{ marginTop: 8 }}>
+                {SHOE_SIZES.map((s) => (
+                  <label key={s} className="size-grid-item">
+                    <span className="muted small">Size {s}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.sizeQuantities?.[s] ?? '0'}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          sizeQuantities: { ...(f.sizeQuantities || {}), [s]: e.target.value },
+                        }))
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
             <label>
               Danh mục / thương hiệu
               <input

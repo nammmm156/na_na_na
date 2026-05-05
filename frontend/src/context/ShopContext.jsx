@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react'
+import { apiFetch } from '../api/client.js'
 import { parseAllowedShoeSize } from '../constants/shoeSizes.js'
 import { formatPrice } from '../utils/format.js'
 
@@ -42,11 +43,20 @@ function uid() {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`
 }
 
-const VOUCHERS = [
-  { code: 'WELCOME10', type: 'percent', value: 10, minSubtotal: 100000 },
-  { code: 'FREESHIP', type: 'fixed', value: 30000, minSubtotal: 200000 },
-  { code: 'VIP50K', type: 'fixed', value: 50000, minSubtotal: 500000 },
-]
+function normalizeVoucherFromApi(v) {
+  if (!v) return null
+  const code = String(v.code || '').trim().toUpperCase()
+  const kind = String(v.kind || '').trim().toUpperCase()
+  const type = kind === 'PERCENT' ? 'percent' : kind === 'FIXED' ? 'fixed' : null
+  if (!code || !type) return null
+  return {
+    code,
+    type,
+    value: Number(v.value || 0),
+    minSubtotal: Number(v.minSubtotal || 0),
+    active: v.active !== false,
+  }
+}
 
 function normalizeProduct(product) {
   if (!product) return null
@@ -69,10 +79,10 @@ function cartLineMatches(item, productId, shoeSize) {
   return normalizeShoeSize(item.shoeSize) === normalizeShoeSize(shoeSize)
 }
 
-function findVoucher(code) {
+function findVoucher(vouchers, code) {
   if (!code) return null
   const normalized = String(code).trim().toUpperCase()
-  return VOUCHERS.find((v) => v.code === normalized) || null
+  return (vouchers || []).find((v) => v.code === normalized) || null
 }
 
 function calcSubtotal(items) {
@@ -91,6 +101,9 @@ function reducer(state, action) {
   switch (action.type) {
     case 'hydrate':
       return action.state
+
+    case 'vouchers/set':
+      return { ...state, vouchers: Array.isArray(action.vouchers) ? action.vouchers : [] }
 
     case 'cart/add': {
       const p = normalizeProduct(action.product)
@@ -136,7 +149,7 @@ function reducer(state, action) {
       return { ...state, cart: { ...state.cart, voucherCode: action.code } }
 
     case 'cart/applyVoucher': {
-      const voucher = findVoucher(state.cart.voucherCode)
+      const voucher = findVoucher(state.vouchers, state.cart.voucherCode)
       return { ...state, cart: { ...state.cart, voucher } }
     }
 
@@ -165,7 +178,7 @@ function reducer(state, action) {
 }
 
 export function ShopProvider({ username, children }) {
-  const [state, dispatch] = useReducer(reducer, undefined, () => readState(username))
+  const [state, dispatch] = useReducer(reducer, undefined, () => ({ ...readState(username), vouchers: [] }))
 
   useEffect(() => {
     // Persist after every change
@@ -174,8 +187,27 @@ export function ShopProvider({ username, children }) {
 
   useEffect(() => {
     // When user changes (login/logout), hydrate correct store
-    dispatch({ type: 'hydrate', state: readState(username) })
+    dispatch({ type: 'hydrate', state: { ...readState(username), vouchers: state.vouchers || [] } })
   }, [username])
+
+  const loadVouchers = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/vouchers')
+      if (!res.ok) return
+      const data = await res.json()
+      const normalized = (Array.isArray(data) ? data : [])
+        .map(normalizeVoucherFromApi)
+        .filter(Boolean)
+        .filter((v) => v.active !== false)
+      dispatch({ type: 'vouchers/set', vouchers: normalized })
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    loadVouchers()
+  }, [loadVouchers])
 
   const act = useCallback((action) => dispatch(action), [])
 
@@ -250,7 +282,7 @@ export function ShopProvider({ username, children }) {
 
   const value = useMemo(
     () => ({
-      vouchers: VOUCHERS,
+      vouchers: state.vouchers || [],
       cart: state.cart,
       orders: state.orders,
       returns: state.returns,
@@ -272,6 +304,7 @@ export function ShopProvider({ username, children }) {
 
       setVoucherCode,
       applyVoucher,
+      loadVouchers,
 
       createOrder,
       mergeServerOrder,
@@ -289,6 +322,7 @@ export function ShopProvider({ username, children }) {
       clearCart,
       setVoucherCode,
       applyVoucher,
+      loadVouchers,
       createOrder,
       mergeServerOrder,
       createReturnRequest,

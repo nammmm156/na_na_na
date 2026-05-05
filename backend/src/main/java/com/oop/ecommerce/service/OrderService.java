@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +32,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final OrderInventoryService orderInventoryService;
+    private final VoucherService voucherService;
 
     @Transactional
     public OrderResponseDto create(CreateOrderRequest request, String username) {
@@ -45,29 +45,22 @@ public class OrderService {
         }
 
         Map<Long, Product> productsById = new LinkedHashMap<>();
-        Map<Long, Integer> qtyNeededByProduct = new HashMap<>();
         long subtotal = 0;
 
         for (CreateOrderItemDto line : request.getItems()) {
             Product p = productRepository.findById(line.getProductId())
                     .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại #" + line.getProductId()));
 
-            qtyNeededByProduct.merge(p.getId(), line.getQuantity(), Integer::sum);
             productsById.put(p.getId(), p);
             subtotal += CheckoutPricing.lineTotalRoundedVnd(p.getPrice(), line.getQuantity());
         }
 
-        for (Map.Entry<Long, Integer> need : qtyNeededByProduct.entrySet()) {
-            Product p = productsById.get(need.getKey());
-            int stock = p.getStockQuantity() == null ? 0 : p.getStockQuantity();
-            if (stock < need.getValue()) {
-                throw new IllegalArgumentException("Không đủ tồn kho: " + p.getName());
-            }
-        }
+        // per-size stock check happens inside inventory service (same source of truth)
+        orderInventoryService.assertSufficientStockFor(request.getItems());
 
         String appliedVoucher = request.getVoucherCode();
         appliedVoucher = (appliedVoucher == null || appliedVoucher.isBlank()) ? null : appliedVoucher.trim().toUpperCase();
-        long discount = CheckoutPricing.discountForVoucher(appliedVoucher, subtotal);
+        long discount = voucherService.discountFor(appliedVoucher, subtotal);
         long total = Math.max(0, subtotal - discount);
 
         Order order = Order.builder()
@@ -94,6 +87,7 @@ public class OrderService {
                     .productName(p.getName())
                     .unitPrice(p.getPrice())
                     .quantity(line.getQuantity())
+                    .shoeSize(line.getShoeSize())
                     .build();
             order.addLineItem(li);
         }
@@ -136,6 +130,7 @@ public class OrderService {
                         .productName(li.getProductName())
                         .quantity(li.getQuantity())
                         .unitPrice(li.getUnitPrice())
+                        .shoeSize(li.getShoeSize())
                         .build())
                 .toList();
 

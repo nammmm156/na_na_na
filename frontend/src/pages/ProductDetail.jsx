@@ -146,7 +146,7 @@ export default function ProductDetail() {
                   onClick={() => {
                     const sz = parseAllowedShoeSize(shoeSize)
                     if (sz == null) {
-                      setSizeError('Vui lòng chọn size giày (39–42) trước khi thêm vào giỏ.')
+                      setSizeError('Vui lòng chọn size giày (35–45) trước khi thêm vào giỏ.')
                       return
                     }
                     setSizeError('')
@@ -161,7 +161,7 @@ export default function ProductDetail() {
                   onClick={() => {
                     const sz = parseAllowedShoeSize(shoeSize)
                     if (sz == null) {
-                      setSizeError('Vui lòng chọn size giày (39–42) trước khi mua.')
+                      setSizeError('Vui lòng chọn size giày (35–45) trước khi mua.')
                       return
                     }
                     setSizeError('')

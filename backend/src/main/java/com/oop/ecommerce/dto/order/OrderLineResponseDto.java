@@ -16,4 +16,5 @@ public class OrderLineResponseDto {
     private String productName;
     private Integer quantity;
     private BigDecimal unitPrice;
+    private Integer shoeSize;
 }
