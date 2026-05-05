@@ -1,5 +1,24 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../api/client.js'
+
+/** Số cột hiển thị trong khung (giống trước: 7 ngày) — toàn bộ tháng lấy từ API, kéo mũi tên để xem tiếp */
+const REVENUE_VISIBLE_DAYS = 7
+
+/** Ngày hiện tại theo Asia/Ho_Chi_Minh (khớp backend) dạng YYYY-MM-DD */
+function todayIsoHoChiMinh() {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  const parts = fmt.formatToParts(new Date())
+  const y = parts.find((p) => p.type === 'year')?.value
+  const m = parts.find((p) => p.type === 'month')?.value
+  const d = parts.find((p) => p.type === 'day')?.value
+  if (!y || !m || !d) return null
+  return `${y}-${m}-${d}`
+}
 
 /** Dữ liệu từ GET /api/admin/dashboard-stats */
 const emptyStats = {
@@ -15,6 +34,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(emptyStats)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [revenueStart, setRevenueStart] = useState(0)
 
   const loadStats = useCallback(async () => {
     setLoading(true)
@@ -41,7 +61,36 @@ export default function Dashboard() {
   }, [loadStats])
 
   const daily = Array.isArray(stats.dailyRevenue) ? stats.dailyRevenue : []
-  const maxDaily = Math.max(1, ...daily.map((p) => Number(p.revenueVnd) || 0))
+
+  useEffect(() => {
+    if (!daily.length) {
+      setRevenueStart(0)
+      return
+    }
+    const todayIso = todayIsoHoChiMinh()
+    let endRef = daily.length - 1
+    if (todayIso) {
+      const idx = daily.findIndex((p) => p.date === todayIso)
+      if (idx >= 0) endRef = idx
+    }
+    const span = Math.min(REVENUE_VISIBLE_DAYS, daily.length)
+    const maxStart = Math.max(0, daily.length - span)
+    const desired = Math.max(0, endRef - (span - 1))
+    setRevenueStart(Math.min(desired, maxStart))
+  }, [daily])
+
+  const revenueSlice = useMemo(() => {
+    if (!daily.length) return []
+    const span = Math.min(REVENUE_VISIBLE_DAYS, daily.length)
+    return daily.slice(revenueStart, revenueStart + span)
+  }, [daily, revenueStart])
+
+  const maxDaily = Math.max(1, ...revenueSlice.map((p) => Number(p.revenueVnd) || 0))
+
+  const span = Math.min(REVENUE_VISIBLE_DAYS, daily.length || REVENUE_VISIBLE_DAYS)
+  const canScrollRevenue = daily.length > REVENUE_VISIBLE_DAYS
+  const canPrevRevenue = canScrollRevenue && revenueStart > 0
+  const canNextRevenue = canScrollRevenue && revenueStart < daily.length - span
 
   const categories = Array.isArray(stats.salesByCategory) ? stats.salesByCategory : []
 
@@ -75,28 +124,48 @@ export default function Dashboard() {
         <article className="card chart-card">
           <h3>Revenue Overview</h3>
           <p className="muted" style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-            Doanh thu theo ngày (7 ngày gần nhất, đơn đã thanh toán)
+            Doanh thu theo ngày trong tháng hiện tại (đơn đã thanh toán). Dùng mũi tên để xem các ngày khác.
           </p>
-          <div className="line-chart">
-            {daily.length === 0 ? (
-              <p className="muted">Chưa có dữ liệu doanh thu theo ngày.</p>
-            ) : (
-              daily.map((point, idx) => {
-                const vnd = Number(point.revenueVnd) || 0
-                const label = point.label || point.date || ''
-                return (
-                  <div key={point.date || idx} className="line-item">
-                    <div
-                      className="line-bar"
-                      style={{ height: `${(vnd / maxDaily) * 180}px` }}
-                      title={`${label}: ${toCurrency(vnd)}`}
-                    />
-                    <span>{label}</span>
-                    {idx < daily.length - 1 ? <i className="line-dot" /> : null}
-                  </div>
-                )
-              })
-            )}
+          <div className="revenue-chart-row">
+            <button
+              type="button"
+              className="chart-nav chart-nav--prev"
+              disabled={!canPrevRevenue}
+              onClick={() => setRevenueStart((s) => Math.max(0, s - 1))}
+              aria-label="Xem các ngày trước"
+            >
+              <span className="chart-nav-triangle chart-nav-triangle--left" aria-hidden />
+            </button>
+            <div className="line-chart">
+              {daily.length === 0 ? (
+                <p className="muted">Chưa có dữ liệu doanh thu theo ngày.</p>
+              ) : (
+                revenueSlice.map((point, idx) => {
+                  const vnd = Number(point.revenueVnd) || 0
+                  const label = point.label || point.date || ''
+                  return (
+                    <div key={point.date || idx} className="line-item">
+                      <div
+                        className="line-bar"
+                        style={{ height: `${(vnd / maxDaily) * 180}px` }}
+                        title={`${label}: ${toCurrency(vnd)}`}
+                      />
+                      <span>{label}</span>
+                      {idx < revenueSlice.length - 1 ? <i className="line-dot" /> : null}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+            <button
+              type="button"
+              className="chart-nav chart-nav--next"
+              disabled={!canNextRevenue}
+              onClick={() => setRevenueStart((s) => Math.min(daily.length - span, s + 1))}
+              aria-label="Xem các ngày sau"
+            >
+              <span className="chart-nav-triangle chart-nav-triangle--right" aria-hidden />
+            </button>
           </div>
         </article>
 

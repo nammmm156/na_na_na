@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -29,7 +30,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminDashboardService {
 
-    private static final int REVENUE_CHART_DAYS = 7;
     private static final ZoneId REPORT_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final DateTimeFormatter LABEL_FMT = DateTimeFormatter.ofPattern("d/M");
 
@@ -46,8 +46,10 @@ public class AdminDashboardService {
         Long soldBoxed = orderRepository.sumPaidLineItemQuantities();
         long itemsSold = soldBoxed != null ? soldBoxed : 0L;
 
-        LocalDate endDay = LocalDate.now(REPORT_ZONE);
-        LocalDate startDay = endDay.minusDays(REVENUE_CHART_DAYS - 1L);
+        LocalDate today = LocalDate.now(REPORT_ZONE);
+        YearMonth ym = YearMonth.from(today);
+        LocalDate startDay = ym.atDay(1);
+        LocalDate endDay = ym.atEndOfMonth();
         var rangeStart = startDay.atStartOfDay(REPORT_ZONE).toLocalDateTime();
 
         List<Order> paidInRange = orderRepository.findByStatusAndCreatedAtGreaterThanEqual(OrderStatus.PAID, rangeStart);
