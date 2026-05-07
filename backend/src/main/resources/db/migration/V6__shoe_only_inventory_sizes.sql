@@ -1,4 +1,28 @@
--- Drop non-shoe / electronics catalog items (broader than V5)
+-- Drop non-shoe / electronics catalog items (broader than V5).
+-- Must delete from order_line_items first (no ON DELETE CASCADE on product FK).
+
+DELETE FROM order_line_items
+WHERE product_id IN (
+    SELECT id FROM product
+    WHERE category IN (
+          'Headphones', 'Laptop', 'Camera', 'Smartwatch', 'Backpack',
+          'Electronics', 'Tablet', 'Phone', 'Monitor', 'Accessory', 'Accessories'
+       )
+       OR LOWER(COALESCE(category, '')) LIKE '%laptop%'
+       OR LOWER(COALESCE(category, '')) LIKE '%headphone%'
+       OR LOWER(COALESCE(category, '')) LIKE '%camera%'
+       OR LOWER(COALESCE(category, '')) LIKE '%smartwatch%'
+       OR LOWER(COALESCE(category, '')) LIKE '%tablet%'
+       OR LOWER(COALESCE(category, '')) LIKE '%điện thoại%'
+       OR LOWER(COALESCE(category, '')) LIKE '%dien thoai%'
+       OR LOWER(COALESCE(category, '')) LIKE '%tai nghe%'
+       OR LOWER(COALESCE(name, '')) IN (
+          'sony wh-1000xm5', 'macbook air m2', 'canon eos r50',
+          'apple watch series 9', 'nomatic backpack',
+          'airpods pro (2nd gen)', 'dell xps 13 plus', 'fujifilm x-t30 ii'
+       )
+);
+
 DELETE FROM product
 WHERE category IN (
       'Headphones', 'Laptop', 'Camera', 'Smartwatch', 'Backpack',
@@ -13,15 +37,11 @@ WHERE category IN (
    OR LOWER(COALESCE(category, '')) LIKE '%dien thoai%'
    OR LOWER(COALESCE(category, '')) LIKE '%tai nghe%'
    OR LOWER(COALESCE(name, '')) IN (
-      'sony wh-1000xm5',
-      'macbook air m2',
-      'canon eos r50',
-      'apple watch series 9',
-      'nomatic backpack',
-      'airpods pro (2nd gen)',
-      'dell xps 13 plus',
-      'fujifilm x-t30 ii'
+      'sony wh-1000xm5', 'macbook air m2', 'canon eos r50',
+      'apple watch series 9', 'nomatic backpack',
+      'airpods pro (2nd gen)', 'dell xps 13 plus', 'fujifilm x-t30 ii'
    );
+
 
 -- Only EU 36–42 are sold; remove other size rows and resync totals
 DELETE FROM product_size_stock
