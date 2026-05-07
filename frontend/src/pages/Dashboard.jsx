@@ -27,7 +27,7 @@ const emptyStats = {
   itemsInStock: 0,
   itemsSold: 0,
   dailyRevenue: [],
-  salesByCategory: [],
+  stockByShoeSize: [],
 }
 
 export default function Dashboard() {
@@ -92,7 +92,7 @@ export default function Dashboard() {
   const canPrevRevenue = canScrollRevenue && revenueStart > 0
   const canNextRevenue = canScrollRevenue && revenueStart < daily.length - span
 
-  const categories = Array.isArray(stats.salesByCategory) ? stats.salesByCategory : []
+  const stockBySize = Array.isArray(stats.stockByShoeSize) ? stats.stockByShoeSize : []
 
   if (loading) {
     return (
@@ -170,17 +170,21 @@ export default function Dashboard() {
         </article>
 
         <article className="card chart-card">
-          <h3>Sales by Category</h3>
+          <h3>Tồn kho theo size (EU)</h3>
+          <p className="muted" style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+            Tổng số đôi đang có, gộp theo size trên toàn bộ sản phẩm.
+          </p>
           <div className="bar-chart">
-            {categories.length === 0 ? (
-              <p className="muted">Chưa có đơn hàng đã thanh toán theo danh mục.</p>
+            {stockBySize.length === 0 ? (
+              <p className="muted">Chưa có dữ liệu tồn kho theo size.</p>
             ) : (
-              categories.map((item) => {
+              stockBySize.map((item) => {
                 const pct = typeof item.percent === 'number' ? item.percent : 0
-                const name = item.category || 'Khác'
+                const size = item.shoeSize != null ? item.shoeSize : '?'
+                const qty = Number(item.quantity) || 0
                 return (
-                  <div key={name} className="bar-row">
-                    <span>{name}</span>
+                  <div key={size} className="bar-row">
+                    <span title={`${qty} đôi`}>Size {size}</span>
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${Math.min(100, pct)}%` }} />
                     </div>

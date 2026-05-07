@@ -35,7 +35,7 @@ public class OrderLineItem {
     @Column(nullable = false)
     private Integer quantity;
 
-    /** EU shoe size (35–45). Nullable for legacy orders. */
+    /** EU shoe size (36–42). Nullable for legacy orders. */
     @Column(name = "shoe_size")
     private Integer shoeSize;
 }

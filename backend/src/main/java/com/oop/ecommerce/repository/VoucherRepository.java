@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface VoucherRepository extends JpaRepository<Voucher, Long> {
+    List<Voucher> findAllByOrderByCreatedAtDesc();
+
     List<Voucher> findByActiveTrueOrderByCreatedAtDesc();
     Optional<Voucher> findByCodeIgnoreCase(String code);
     void deleteByCodeIgnoreCase(String code);

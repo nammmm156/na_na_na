@@ -19,7 +19,7 @@ public class CreateOrderItemDto {
     private Integer quantity;
 
     @NotNull
-    @Min(35)
-    @Max(45)
+    @Min(36)
+    @Max(42)
     private Integer shoeSize;
 }

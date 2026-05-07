@@ -23,5 +23,6 @@ public class AdminDashboardStatsDto {
     private long itemsSold;
     /** Chuỗi ngày liên tục (vd 7 ngày), ngày không có đơn = 0 */
     private List<DailyRevenuePointDto> dailyRevenue = new ArrayList<>();
-    private List<CategorySalesShareDto> salesByCategory = new ArrayList<>();
+    /** Tồn kho gộp theo size EU (tổng quantity trên mọi sản phẩm) */
+    private List<ShoeSizeStockShareDto> stockByShoeSize = new ArrayList<>();
 }

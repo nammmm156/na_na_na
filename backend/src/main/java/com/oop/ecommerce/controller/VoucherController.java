@@ -23,6 +23,12 @@ public class VoucherController {
         return voucherService.listActive().stream().map(VoucherController::toDto).toList();
     }
 
+    @GetMapping("/api/admin/vouchers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<VoucherDto> listAllForAdmin() {
+        return voucherService.listAll().stream().map(VoucherController::toDto).toList();
+    }
+
     @PostMapping("/api/admin/vouchers")
     @PreAuthorize("hasRole('ADMIN')")
     public VoucherDto upsert(@Valid @RequestBody UpsertVoucherRequest req) {

@@ -1,12 +1,13 @@
 package com.oop.ecommerce.service;
 
 import com.oop.ecommerce.dto.AdminDashboardStatsDto;
-import com.oop.ecommerce.dto.CategorySalesShareDto;
 import com.oop.ecommerce.dto.DailyRevenuePointDto;
+import com.oop.ecommerce.dto.ShoeSizeStockShareDto;
 import com.oop.ecommerce.model.Order;
 import com.oop.ecommerce.model.OrderStatus;
 import com.oop.ecommerce.repository.OrderRepository;
 import com.oop.ecommerce.repository.ProductRepository;
+import com.oop.ecommerce.repository.ProductSizeStockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class AdminDashboardService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final ProductSizeStockRepository productSizeStockRepository;
 
     @Transactional(readOnly = true)
     public AdminDashboardStatsDto getDashboardStats() {
@@ -54,9 +56,9 @@ public class AdminDashboardService {
 
         List<Order> paidInRange = orderRepository.findByStatusAndCreatedAtGreaterThanEqual(OrderStatus.PAID, rangeStart);
         List<DailyRevenuePointDto> daily = buildDailyRevenueSeries(startDay, endDay, paidInRange);
-        List<CategorySalesShareDto> categories = buildCategoryShares();
+        List<ShoeSizeStockShareDto> stockBySize = buildStockSharesByShoeSize();
 
-        return new AdminDashboardStatsDto(totalRevenue, totalProducts, itemsInStock, itemsSold, daily, categories);
+        return new AdminDashboardStatsDto(totalRevenue, totalProducts, itemsInStock, itemsSold, daily, stockBySize);
     }
 
     private List<DailyRevenuePointDto> buildDailyRevenueSeries(LocalDate startDay, LocalDate endDay, List<Order> paidInRange) {
@@ -82,40 +84,27 @@ public class AdminDashboardService {
         return out;
     }
 
-    private List<CategorySalesShareDto> buildCategoryShares() {
-        List<Object[]> rows = orderRepository.sumPaidLineRevenueByCategory();
-        List<CategorySalesShareDto> raw = new ArrayList<>();
-        BigDecimal sumAll = BigDecimal.ZERO;
+    private List<ShoeSizeStockShareDto> buildStockSharesByShoeSize() {
+        List<Object[]> rows = productSizeStockRepository.sumQuantityGroupedByShoeSize();
+        List<ShoeSizeStockShareDto> raw = new ArrayList<>();
+        long sumAll = 0L;
         for (Object[] row : rows) {
-            String cat = row[0] != null ? row[0].toString() : "Khác";
-            BigDecimal rev = toBigDecimal(row[1]);
-            raw.add(new CategorySalesShareDto(cat, rev, 0.0));
-            sumAll = sumAll.add(rev);
+            int size = ((Number) row[0]).intValue();
+            long qty = row[1] instanceof Number n ? n.longValue() : 0L;
+            raw.add(new ShoeSizeStockShareDto(size, qty, 0.0));
+            sumAll += qty;
         }
-        if (sumAll.signum() == 0) {
+        if (sumAll <= 0) {
             return raw;
         }
-        List<CategorySalesShareDto> withPct = new ArrayList<>();
-        for (CategorySalesShareDto c : raw) {
-            double pct = c.getRevenueVnd()
+        List<ShoeSizeStockShareDto> withPct = new ArrayList<>();
+        for (ShoeSizeStockShareDto c : raw) {
+            double pct = BigDecimal.valueOf(c.getQuantity())
                     .multiply(BigDecimal.valueOf(100))
-                    .divide(sumAll, 2, RoundingMode.HALF_UP)
+                    .divide(BigDecimal.valueOf(sumAll), 2, RoundingMode.HALF_UP)
                     .doubleValue();
-            withPct.add(new CategorySalesShareDto(c.getCategory(), c.getRevenueVnd(), pct));
+            withPct.add(new ShoeSizeStockShareDto(c.getShoeSize(), c.getQuantity(), pct));
         }
         return withPct;
-    }
-
-    private static BigDecimal toBigDecimal(Object o) {
-        if (o == null) {
-            return BigDecimal.ZERO;
-        }
-        if (o instanceof BigDecimal bd) {
-            return bd;
-        }
-        if (o instanceof Number n) {
-            return BigDecimal.valueOf(n.doubleValue());
-        }
-        return new BigDecimal(o.toString());
     }
 }

@@ -1,5 +1,6 @@
 package com.oop.ecommerce.service;
 
+import com.oop.ecommerce.catalog.ShoeCatalog;
 import com.oop.ecommerce.model.Product;
 import com.oop.ecommerce.model.ProductSizeStock;
 import com.oop.ecommerce.repository.ProductRepository;
@@ -7,6 +8,7 @@ import com.oop.ecommerce.repository.ProductSizeStockRepository;
 import com.oop.ecommerce.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.oop.ecommerce.dto.ProductUpsertRequest;
 import com.oop.ecommerce.dto.ProductStatisticsDto;
@@ -55,6 +57,7 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    @Transactional
     public Product createProduct(ProductUpsertRequest req) {
         Product p = new Product();
         applyUpsert(p, req);
@@ -80,6 +83,7 @@ public class ProductService {
                 });
     }
 
+    @Transactional
     public Optional<Product> updateProduct(Long id, ProductUpsertRequest req) {
         return productRepository.findById(id).map(p -> {
             applyUpsert(p, req);
@@ -148,7 +152,7 @@ public class ProductService {
         }
 
         int total = 0;
-        for (int size = 35; size <= 45; size++) {
+        for (int size = ShoeCatalog.MIN_EU_SHOE_SIZE; size <= ShoeCatalog.MAX_EU_SHOE_SIZE; size++) {
             int qty = Math.max(0, incoming.getOrDefault(size, 0));
             ProductSizeStock row = existingBySize.get(size);
             if (row == null) {
@@ -160,6 +164,8 @@ public class ProductService {
             total += qty;
         }
 
+        productSizeStockRepository.deleteByProductIdAndSizeOutsideRange(
+                product.getId(), ShoeCatalog.MIN_EU_SHOE_SIZE, ShoeCatalog.MAX_EU_SHOE_SIZE);
         product.setStockQuantity(total);
     }
 }

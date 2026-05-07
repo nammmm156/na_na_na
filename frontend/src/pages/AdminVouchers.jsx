@@ -10,16 +10,41 @@ function normalizeKind(k) {
   return v === 'FIXED' ? 'FIXED' : 'PERCENT'
 }
 
+function normalizeAdminVoucher(v) {
+  if (!v) return null
+  const code = String(v.code || '').trim().toUpperCase()
+  const kind = String(v.kind || '').trim().toUpperCase()
+  const type = kind === 'PERCENT' ? 'percent' : kind === 'FIXED' ? 'fixed' : null
+  if (!code || !type) return null
+  return {
+    code,
+    type,
+    value: Number(v.value || 0),
+    minSubtotal: Number(v.minSubtotal || 0),
+    active: Boolean(v.active),
+  }
+}
+
 export default function AdminVouchers() {
-  const { vouchers, loadVouchers } = useShop()
+  const { loadVouchers } = useShop()
+  const [rows, setRows] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
 
-  const view = useMemo(() => vouchers || [], [vouchers])
+  const view = useMemo(() => rows || [], [rows])
 
   const refresh = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/admin/vouchers')
+      if (!res.ok) throw new Error((await res.text()) || 'Không tải danh sách voucher')
+      const data = await res.json()
+      const normalized = (Array.isArray(data) ? data : []).map(normalizeAdminVoucher).filter(Boolean)
+      setRows(normalized)
+    } catch (e2) {
+      setError(e2 instanceof Error ? e2.message : 'Lỗi tải voucher')
+    }
     await loadVouchers?.()
   }, [loadVouchers])
 
@@ -152,6 +177,12 @@ export default function AdminVouchers() {
             </div>
             <p className="muted small" style={{ marginTop: 6 }}>
               Đơn tối thiểu: <strong>{formatPrice(v.minSubtotal || 0)}</strong>
+              {!v.active ? (
+                <>
+                  {' '}
+                  · <span className="alert-error" style={{ fontSize: '0.85em' }}>Đang tắt</span>
+                </>
+              ) : null}
             </p>
             <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(v.code)}>
               🗑️ Xóa
@@ -162,4 +193,3 @@ export default function AdminVouchers() {
     </section>
   )
 }
-

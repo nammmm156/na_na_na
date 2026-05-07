@@ -287,7 +287,7 @@ export default function Products() {
               />
             </label>
             <div>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Tồn kho theo size (35–45)</div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Tồn kho theo size (36–42)</div>
               <div className="size-grid" style={{ marginTop: 8 }}>
                 {SHOE_SIZES.map((s) => (
                   <label key={s} className="size-grid-item">

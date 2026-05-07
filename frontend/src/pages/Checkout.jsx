@@ -106,7 +106,7 @@ export default function Checkout() {
 
     const unresolved = lines.findIndex((it) => parseAllowedShoeSize(it.shoeSize) == null)
     if (unresolved >= 0) {
-      setError('Vui lòng chọn size giày (35–45) cho mỗi sản phẩm trước khi đặt hàng.')
+      setError('Vui lòng chọn size giày (36–42) cho mỗi sản phẩm trước khi đặt hàng.')
       return
     }
 

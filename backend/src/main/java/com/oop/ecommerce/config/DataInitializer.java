@@ -1,5 +1,6 @@
 package com.oop.ecommerce.config;
 
+import com.oop.ecommerce.catalog.ShoeCatalog;
 import com.oop.ecommerce.model.Product;
 import com.oop.ecommerce.model.ProductSizeStock;
 import com.oop.ecommerce.model.Role;
@@ -58,14 +59,15 @@ public class DataInitializer implements CommandLineRunner {
             for (int i = 0; i < seeds.size(); i++) {
                 Product p = saved.get(i);
                 int perSize = seeds.get(i).qtyPerSize;
-                for (int size = 35; size <= 45; size++) {
+                int sizeCount = ShoeCatalog.MAX_EU_SHOE_SIZE - ShoeCatalog.MIN_EU_SHOE_SIZE + 1;
+                for (int size = ShoeCatalog.MIN_EU_SHOE_SIZE; size <= ShoeCatalog.MAX_EU_SHOE_SIZE; size++) {
                     stocks.add(ProductSizeStock.builder()
                             .product(p)
                             .shoeSize(size)
                             .quantity(perSize)
                             .build());
                 }
-                p.setStockQuantity(perSize * 11); // 35..45
+                p.setStockQuantity(perSize * sizeCount);
             }
             productRepository.saveAll(saved);
             productSizeStockRepository.saveAll(stocks);

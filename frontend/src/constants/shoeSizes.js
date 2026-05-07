@@ -1,7 +1,10 @@
-/** Size EU cố định cho giày trong shop */
-export const SHOE_SIZES = Array.from({ length: 45 - 35 + 1 }, (_, i) => 35 + i)
+const MIN_EU = 36
+const MAX_EU = 42
 
-/** Chỉ chấp nhận đúng 35–45; mọi giá trị khác → null (không gửi lệnh sai lên server). */
+/** Size EU cố định cho giày trong shop */
+export const SHOE_SIZES = Array.from({ length: MAX_EU - MIN_EU + 1 }, (_, i) => MIN_EU + i)
+
+/** Chỉ chấp nhận đúng 36–42; mọi giá trị khác → null (không gửi lệnh sai lên server). */
 export function parseAllowedShoeSize(v) {
   if (v == null || v === '') return null
   const n = typeof v === 'number' ? v : Number(String(v).trim())

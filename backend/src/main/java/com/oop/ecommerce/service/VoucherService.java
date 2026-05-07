@@ -20,6 +20,11 @@ public class VoucherService {
         return voucherRepository.findByActiveTrueOrderByCreatedAtDesc();
     }
 
+    @Transactional(readOnly = true)
+    public List<Voucher> listAll() {
+        return voucherRepository.findAllByOrderByCreatedAtDesc();
+    }
+
     @Transactional
     public Voucher upsert(UpsertVoucherRequest req) {
         String code = normalizeCode(req.getCode());

@@ -22,7 +22,7 @@ public class ProductUpsertRequest {
     private String imageUrl;
 
     /**
-     * Key = EU shoe size (35..45), value = quantity for that size.
+     * Key = EU shoe size (36..42), value = quantity for that size.
      * Missing sizes will be treated as 0.
      */
     private Map<Integer, Integer> sizeQuantities;
