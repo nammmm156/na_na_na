@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { apiFetch } from '../api/client.js'
 import { useShop } from '../context/ShopContext.jsx'
 import { formatPrice } from '../utils/format.js'
 
@@ -15,6 +17,49 @@ export default function Orders() {
   const location = useLocation()
   const navigate = useNavigate()
   const highlightOrderId = location.state?.highlightOrderId
+  const [imageByProductId, setImageByProductId] = useState({})
+
+  const missingImageProductIds = useMemo(() => {
+    const ids = new Set()
+    for (const order of orders || []) {
+      for (const item of order.items || []) {
+        if (!item?.imageUrl && item?.productId != null) ids.add(Number(item.productId))
+      }
+    }
+    return Array.from(ids)
+  }, [orders])
+
+  useEffect(() => {
+    const unresolved = missingImageProductIds.filter((id) => !imageByProductId[id])
+    if (!unresolved.length) return
+    let cancelled = false
+
+    async function loadMissingImages() {
+      const updates = {}
+      await Promise.all(
+        unresolved.map(async (id) => {
+          try {
+            const res = await apiFetch(`/api/products/${id}`)
+            if (!res.ok) return
+            const data = await res.json()
+            const imageUrl = String(data?.imageUrl || '').trim()
+            if (imageUrl) updates[id] = imageUrl
+          } catch {
+            // ignore single product fetch failures to keep order history usable
+          }
+        }),
+      )
+
+      if (!cancelled && Object.keys(updates).length) {
+        setImageByProductId((prev) => ({ ...prev, ...updates }))
+      }
+    }
+
+    loadMissingImages()
+    return () => {
+      cancelled = true
+    }
+  }, [missingImageProductIds, imageByProductId])
 
   return (
     <section className="orders-page">
@@ -77,6 +122,7 @@ export default function Orders() {
                         <img
                           className="cart-thumb"
                           src={
+                            imageByProductId[it.productId] ||
                             it.imageUrl ||
                             'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=300&q=80'
                           }
