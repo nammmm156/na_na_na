@@ -16,7 +16,7 @@ export default function Navbar() {
     <header className="topbar">
       <div className="container topbar-inner">
         <NavLink to="/" className="brand">
-          QuanlyShop
+          HTShoes
         </NavLink>
 
         <nav className="nav-links">
@@ -40,9 +40,14 @@ export default function Navbar() {
             </>
           ) : null}
           {isAdmin ? (
-            <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Dashboard
-            </NavLink>
+            <>
+              <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
+                Dashboard
+              </NavLink>
+              <NavLink to="/admin/vouchers" className={({ isActive }) => (isActive ? 'active' : '')}>
+                Voucher
+              </NavLink>
+            </>
           ) : null}
         </nav>
 

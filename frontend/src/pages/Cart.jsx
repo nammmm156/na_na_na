@@ -50,8 +50,8 @@ export default function Cart() {
               <span />
             </div>
 
-            {items.map((it) => (
-              <div key={it.productId} className="cart-row">
+            {items.map((it, idx) => (
+              <div key={`${it.productId}-${it.shoeSize ?? 'x'}-${idx}`} className="cart-row">
                 <div className="cart-prod">
                   <img
                     className="cart-thumb"
@@ -63,7 +63,10 @@ export default function Cart() {
                   />
                   <div>
                     <div className="cart-name">{it.name}</div>
-                    <div className="muted small">{formatPrice(it.price)}</div>
+                    <div className="muted small">
+                      {it.shoeSize != null ? <>Size {it.shoeSize} · </> : null}
+                      {formatPrice(it.price)}
+                    </div>
                   </div>
                 </div>
 
@@ -72,7 +75,7 @@ export default function Cart() {
                     type="number"
                     min="1"
                     value={it.quantity}
-                    onChange={(e) => setQuantity(it.productId, e.target.value)}
+                    onChange={(e) => setQuantity(it.productId, e.target.value, it.shoeSize)}
                   />
                 </div>
 
@@ -81,7 +84,7 @@ export default function Cart() {
                 </div>
 
                 <div className="cart-actions">
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeFromCart(it.productId)}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeFromCart(it.productId, it.shoeSize)}>
                     Xóa
                   </button>
                 </div>

@@ -4,16 +4,17 @@ services:
   postgres:
     image: docker.io/library/postgres:16-alpine
     container_name: ecommerce-postgres
-    network_mode: "host"
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -22,13 +23,12 @@ services:
     build:
       context: ./backend
     container_name: ecommerce-backend
-    network_mode: "host"
     restart: unless-stopped
-    env_file:
-      - .env
+    ports:
+      - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: psql
-      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -38,14 +38,16 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
       context: ./frontend
     container_name: ecommerce-frontend
-    network_mode: "host"
     restart: unless-stopped
+    ports:
+      - "80:80"
     depends_on:
       - backend
 

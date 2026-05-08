@@ -1,31 +1,63 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import { useShop } from '../context/ShopContext.jsx'
+import { SHOE_SIZES } from '../constants/shoeSizes.js'
 
 const emptyForm = {
   name: '',
   description: '',
   price: '',
-  stockQuantity: '',
   category: '',
   imageUrl: '',
+  sizeQuantities: Object.fromEntries(SHOE_SIZES.map((s) => [s, '0'])),
 }
 
 const fallbackImage =
   'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80'
 
+function norm(s) {
+  return (s || '').toLowerCase()
+}
+
+function productMatchesNav(p, navKey) {
+  const cat = norm(p.category)
+  switch (navKey) {
+    case 'all':
+      return true
+    case 'nike':
+      return cat.includes('nike')
+    case 'adidas':
+      return cat.includes('adidas')
+    case 'lacoste':
+      return cat.includes('lacoste')
+    case 'puma':
+      return cat.includes('puma')
+    default:
+      return true
+  }
+}
+
+function productMatchesSearch(p, q) {
+  const needle = norm(q).trim()
+  if (!needle) return true
+  return (
+    norm(p.name).includes(needle) ||
+    norm(p.description).includes(needle) ||
+    norm(p.category).includes(needle)
+  )
+}
+
 export default function Products() {
-  const navigate = useNavigate()
-  const { isAuthenticated, isAdmin } = useAuth()
-  const { addToCart } = useShop()
+  const { isAdmin } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [shoeNav, setShoeNav] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const load = useCallback(async () => {
     setError('')
@@ -47,13 +79,16 @@ export default function Products() {
 
   function startEdit(p) {
     setEditingId(p.id)
+    const incoming = p.sizeQuantities && typeof p.sizeQuantities === 'object' ? p.sizeQuantities : {}
     setForm({
       name: p.name ?? '',
       description: p.description ?? '',
       price: p.price != null ? String(p.price) : '',
-      stockQuantity: p.stockQuantity != null ? String(p.stockQuantity) : '',
       category: p.category ?? '',
       imageUrl: p.imageUrl ?? '',
+      sizeQuantities: Object.fromEntries(
+        SHOE_SIZES.map((s) => [s, incoming[s] != null ? String(incoming[s]) : '0']),
+      ),
     })
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -75,13 +110,20 @@ export default function Products() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    const sizeQuantities = Object.fromEntries(
+      SHOE_SIZES.map((s) => {
+        const raw = form.sizeQuantities?.[s]
+        const n = raw === '' || raw == null ? 0 : parseInt(String(raw), 10)
+        return [s, Number.isFinite(n) && n > 0 ? n : 0]
+      }),
+    )
     const body = {
       name: form.name,
       description: form.description || null,
       price: form.price === '' ? null : Number(form.price),
-      stockQuantity: form.stockQuantity === '' ? null : parseInt(form.stockQuantity, 10),
       category: form.category || null,
       imageUrl: form.imageUrl || null,
+      sizeQuantities,
     }
     try {
       if (editingId) {
@@ -117,18 +159,10 @@ export default function Products() {
     }
   }
 
-  function handleAddToCart(product) {
-    addToCart(product, 1)
-  }
-
-  function handleBuyNow(product) {
-    navigate('/checkout', {
-      state: {
-        mode: 'buyNow',
-        items: [{ ...product, productId: product.id, quantity: 1 }],
-      },
-    })
-  }
+  const filteredItems = useMemo(
+    () => items.filter((p) => productMatchesNav(p, shoeNav) && productMatchesSearch(p, searchQuery)),
+    [items, shoeNav, searchQuery],
+  )
 
   return (
     <div className="products-page">
@@ -136,7 +170,9 @@ export default function Products() {
         <div>
           <h1>Sản phẩm</h1>
           <p className="muted">
-            {isAdmin ? 'Quản lý sản phẩm — thêm, sửa, xóa.' : 'Khám phá các sản phẩm chất lượng cao.'}
+            {isAdmin
+              ? 'Hãy để chúng tôi giúp đôi chân của bạn chắc chắn trên từng bước đi!'
+              : 'Chọn thương hiệu hoặc tìm kiếm để xem giày phù hợp.'}
           </p>
         </div>
         <div className="header-actions">
@@ -150,6 +186,71 @@ export default function Products() {
           ) : null}
         </div>
       </header>
+
+      <nav className="shoe-category-bar" aria-label="Danh mục giày theo thương hiệu">
+        <div className="shoe-category-inner">
+          <ul className="shoe-category-list">
+            <li>
+              <button
+                type="button"
+                className={`shoe-nav-btn${shoeNav === 'all' ? ' active' : ''}`}
+                onClick={() => setShoeNav('all')}
+              >
+                Tất cả
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className={`shoe-nav-btn${shoeNav === 'nike' ? ' active' : ''}`}
+                onClick={() => setShoeNav('nike')}
+              >
+                Giày Nike
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className={`shoe-nav-btn${shoeNav === 'adidas' ? ' active' : ''}`}
+                onClick={() => setShoeNav('adidas')}
+              >
+                Giày Adidas
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className={`shoe-nav-btn${shoeNav === 'lacoste' ? ' active' : ''}`}
+                onClick={() => setShoeNav('lacoste')}
+              >
+                Giày Lacoste
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className={`shoe-nav-btn${shoeNav === 'puma' ? ' active' : ''}`}
+                onClick={() => setShoeNav('puma')}
+              >
+                Giày Puma
+              </button>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <div className="product-toolbar">
+        <label className="product-search">
+          Tìm kiếm
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tên giày, mô tả, danh mục…"
+            autoComplete="off"
+          />
+        </label>
+      </div>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
 
@@ -185,20 +286,33 @@ export default function Products() {
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
             </label>
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Tồn kho theo size (36–42)</div>
+              <div className="size-grid" style={{ marginTop: 8 }}>
+                {SHOE_SIZES.map((s) => (
+                  <label key={s} className="size-grid-item">
+                    <span className="muted small">Size {s}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.sizeQuantities?.[s] ?? '0'}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          sizeQuantities: { ...(f.sizeQuantities || {}), [s]: e.target.value },
+                        }))
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
             <label>
-              Tồn kho
-              <input
-                type="number"
-                min="0"
-                value={form.stockQuantity}
-                onChange={(e) => setForm((f) => ({ ...f, stockQuantity: e.target.value }))}
-              />
-            </label>
-            <label>
-              Danh mục
+              Danh mục / thương hiệu
               <input
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                placeholder="VD: Giày Nike, Giày Adidas…"
               />
             </label>
             <label className="span-2">
@@ -236,12 +350,17 @@ export default function Products() {
           </div>
         ) : items.length === 0 ? (
           <div className="empty-state">
-            <h3>Chưa có sản phẩm</h3>
+            <h3>Chưa có giày trong kho</h3>
             <p>Hãy thêm sản phẩm đầu tiên!</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="empty-state">
+            <h3>Không tìm thấy giày phù hợp</h3>
+            <p>Thử đổi thương hiệu hoặc từ khóa tìm kiếm.</p>
           </div>
         ) : (
           <div className="products-grid">
-            {items.map((p) => (
+            {filteredItems.map((p) => (
               <article key={p.id} className="product-card">
                 <Link to={`/products/${p.id}`} className="product-media">
                   <img
@@ -252,12 +371,12 @@ export default function Products() {
                   />
                 </Link>
                 <div className="product-content">
-                  <p className="product-category">{p.category || 'General'}</p>
+                  <p className="product-category">{p.category || 'Giày'}</p>
                   <h3>
                     <Link to={`/products/${p.id}`}>{p.name}</Link>
                   </h3>
                   <p className="product-description">
-                    {p.description || 'Sản phẩm chất lượng cao.'}
+                    {p.description || 'Giày chính hãng, đi êm bền.'}
                   </p>
                   <div className="product-footer">
                     <strong className="product-price">{formatPrice(p.price)}</strong>
@@ -268,49 +387,24 @@ export default function Products() {
                     ) : null}
                   </div>
                 </div>
-                <div className="product-actions">
-                  {isAuthenticated && !isAdmin ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm btn-full"
-                        onClick={() => handleAddToCart(p)}
-                      >
-                        + Thêm vào giỏ
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm btn-full"
-                        onClick={() => handleBuyNow(p)}
-                      >
-                        🛒 Mua ngay
-                      </button>
-                    </>
-                  ) : null}
-                  {isAdmin ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm btn-full"
-                        onClick={() => startEdit(p)}
-                      >
-                        ✏️ Sửa
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm btn-full"
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        🗑️ Xóa
-                      </button>
-                    </>
-                  ) : null}
-                  {!isAuthenticated ? (
-                    <Link to="/login" className="btn btn-secondary btn-sm btn-full">
-                      Đăng nhập để mua
-                    </Link>
-                  ) : null}
-                </div>
+                {isAdmin ? (
+                  <div className="product-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm btn-full"
+                      onClick={() => startEdit(p)}
+                    >
+                      ✏️ Sửa
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm btn-full"
+                      onClick={() => handleDelete(p.id)}
+                    >
+                      🗑️ Xóa
+                    </button>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>

@@ -1,5 +1,6 @@
 package com.oop.ecommerce.controller;
 
+import com.oop.ecommerce.dto.ProductResponseDto;
 import com.oop.ecommerce.model.Product;
 import com.oop.ecommerce.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.oop.ecommerce.dto.ProductStatisticsDto;
+import com.oop.ecommerce.dto.ProductUpsertRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
@@ -23,8 +25,8 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<Product> getAllProducts() {
-        return productService.getAllProducts();
+    public List<ProductResponseDto> getAllProducts() {
+        return productService.getAllProducts().stream().map(this::toDto).toList();
     }
 
     @GetMapping("/statistics")
@@ -34,16 +36,16 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ProductResponseDto> getProductById(@PathVariable Long id) {
         return productService.getProductById(id)
-                .map(ResponseEntity::ok)
+                .map(p -> ResponseEntity.ok(toDto(p)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public Product createProduct(@RequestBody Product product) {
-        return productService.saveProduct(product);
+    public ProductResponseDto createProduct(@RequestBody ProductUpsertRequest req) {
+        return toDto(productService.createProduct(req));
     }
 
     @PostMapping("/{id}/buy")
@@ -60,9 +62,9 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
-        return productService.updateProduct(id, product)
-                .map(ResponseEntity::ok)
+    public ResponseEntity<ProductResponseDto> updateProduct(@PathVariable Long id, @RequestBody ProductUpsertRequest req) {
+        return productService.updateProduct(id, req)
+                .map(p -> ResponseEntity.ok(toDto(p)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -71,5 +73,19 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private ProductResponseDto toDto(Product p) {
+        return ProductResponseDto.builder()
+                .id(p.getId())
+                .name(p.getName())
+                .description(p.getDescription())
+                .price(p.getPrice())
+                .stockQuantity(p.getStockQuantity())
+                .category(p.getCategory())
+                .imageUrl(p.getImageUrl())
+                .soldQuantity(p.getSoldQuantity())
+                .sizeQuantities(productService.getSizeQuantities(p.getId()))
+                .build();
     }
 }

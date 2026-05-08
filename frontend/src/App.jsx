@@ -15,6 +15,7 @@ import Register from './pages/Register.jsx'
 import Products from './pages/Products.jsx'
 import Returns from './pages/Returns.jsx'
 import Vouchers from './pages/Vouchers.jsx'
+import AdminVouchers from './pages/AdminVouchers.jsx'
 import './App.css'
 
 class ErrorBoundary extends React.Component {
@@ -106,6 +107,14 @@ function Layout() {
             element={
               <ProtectedRoute requireAdmin>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/vouchers"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminVouchers />
               </ProtectedRoute>
             }
           />
