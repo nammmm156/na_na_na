@@ -129,6 +129,7 @@ export default function ProductDetail() {
                   setSizeError('')
                 }}
                 labelledById={`detail-size-${id}`}
+                sizeQuantities={product?.sizeQuantities}
               />
               {sizeError ? (
                 <div className="alert alert-error" style={{ marginTop: 10 }}>

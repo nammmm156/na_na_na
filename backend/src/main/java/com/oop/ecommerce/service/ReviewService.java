@@ -4,6 +4,7 @@ import com.oop.ecommerce.dto.ReviewCreateRequest;
 import com.oop.ecommerce.dto.ReviewResponseDto;
 import com.oop.ecommerce.model.Review;
 import com.oop.ecommerce.model.User;
+import com.oop.ecommerce.repository.OrderRepository;
 import com.oop.ecommerce.repository.ProductRepository;
 import com.oop.ecommerce.repository.ReviewRepository;
 import com.oop.ecommerce.repository.UserRepository;
@@ -20,6 +21,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
     public List<ReviewResponseDto> findByProductId(Long productId) {
         return reviewRepository.findByProductIdOrderByCreatedAtDesc(productId).stream()
@@ -34,6 +36,11 @@ public class ReviewService {
         }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        boolean bought = orderRepository.hasPaidPurchaseForProduct(userId, request.getProductId());
+        if (!bought) {
+            throw new IllegalStateException("Chỉ khách hàng đã mua sản phẩm mới được đánh giá.");
+        }
 
         String comment = request.getComment() != null ? request.getComment().trim() : "";
 

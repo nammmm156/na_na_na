@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { SHOE_SIZES } from '../constants/shoeSizes.js'
+import HeroCarousel from '../components/HeroCarousel.jsx'
 
 const emptyForm = {
   name: '',
@@ -166,13 +167,14 @@ export default function Products() {
 
   return (
     <div className="products-page">
+      {!isAdmin ? <HeroCarousel /> : null}
       <header className="page-header">
         <div>
           <h1>Sản phẩm</h1>
           <p className="muted">
             {isAdmin
               ? 'Hãy để chúng tôi giúp đôi chân của bạn chắc chắn trên từng bước đi!'
-              : 'Chọn thương hiệu hoặc tìm kiếm để xem giày phù hợp.'}
+              : 'HTshoes - Nâng niu bàn chân Việt'}
           </p>
         </div>
         <div className="header-actions">

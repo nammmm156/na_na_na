@@ -1,8 +1,10 @@
 import { SHOE_SIZES } from '../constants/shoeSizes.js'
 
-export default function ShoeSizePicker({ value, onChange, labelledById, className }) {
+export default function ShoeSizePicker({ value, onChange, labelledById, className, sizeQuantities }) {
   const selectValue =
     value != null && SHOE_SIZES.includes(Number(value)) ? String(Number(value)) : ''
+
+  const qtyBySize = sizeQuantities && typeof sizeQuantities === 'object' ? sizeQuantities : {}
 
   return (
     <div className={['shoe-size-picker', className].filter(Boolean).join(' ')}>
@@ -21,8 +23,8 @@ export default function ShoeSizePicker({ value, onChange, labelledById, classNam
         >
           <option value="">-- Chọn size --</option>
           {SHOE_SIZES.map((s) => (
-            <option key={s} value={s}>
-              {s}
+            <option key={s} value={s} disabled={Number(qtyBySize?.[s] ?? 0) <= 0}>
+              {s} {qtyBySize?.[s] != null ? `(còn ${Number(qtyBySize[s] || 0)})` : ''}
             </option>
           ))}
         </select>

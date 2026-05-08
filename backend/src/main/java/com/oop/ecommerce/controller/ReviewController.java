@@ -43,6 +43,8 @@ public class ReviewController {
         try {
             ReviewResponseDto created = reviewService.createReview(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
