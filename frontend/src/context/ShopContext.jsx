@@ -146,11 +146,13 @@ function reducer(state, action) {
       return { ...state, cart: { ...state.cart, items: [], voucherCode: '', voucher: null } }
 
     case 'cart/setVoucherCode':
-      return { ...state, cart: { ...state.cart, voucherCode: action.code } }
+      return { ...state, cart: { ...state.cart, voucherCode: action.code, voucher: null } }
 
     case 'cart/applyVoucher': {
-      const voucher = findVoucher(state.vouchers, state.cart.voucherCode)
-      return { ...state, cart: { ...state.cart, voucher } }
+      const code = action.code ?? state.cart.voucherCode
+      const normalizedCode = String(code || '').trim().toUpperCase()
+      const voucher = findVoucher(state.vouchers, normalizedCode)
+      return { ...state, cart: { ...state.cart, voucherCode: normalizedCode, voucher } }
     }
 
     case 'order/create': {
@@ -185,11 +187,6 @@ export function ShopProvider({ username, children }) {
     writeState(username, state)
   }, [username, state])
 
-  useEffect(() => {
-    // When user changes (login/logout), hydrate correct store
-    dispatch({ type: 'hydrate', state: { ...readState(username), vouchers: state.vouchers || [] } })
-  }, [username])
-
   const loadVouchers = useCallback(async () => {
     try {
       const res = await apiFetch('/api/vouchers')
@@ -206,8 +203,11 @@ export function ShopProvider({ username, children }) {
   }, [])
 
   useEffect(() => {
+    // When user changes (login/logout), hydrate correct store and refresh vouchers.
+    // This avoids stale/empty voucher list after switching accounts.
+    dispatch({ type: 'hydrate', state: { ...readState(username), vouchers: state.vouchers || [] } })
     loadVouchers()
-  }, [loadVouchers])
+  }, [username, loadVouchers])
 
   const act = useCallback((action) => dispatch(action), [])
 
@@ -232,7 +232,7 @@ export function ShopProvider({ username, children }) {
   const clearCart = useCallback(() => act({ type: 'cart/clear' }), [act])
 
   const setVoucherCode = useCallback((code) => act({ type: 'cart/setVoucherCode', code }), [act])
-  const applyVoucher = useCallback(() => act({ type: 'cart/applyVoucher' }), [act])
+  const applyVoucher = useCallback((code) => act({ type: 'cart/applyVoucher', code }), [act])
 
   const mergeServerOrder = useCallback((order) => act({ type: 'order/mergeServer', order }), [act])
 

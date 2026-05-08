@@ -30,11 +30,25 @@ function normalizeItems(items) {
     .filter((it) => it.productId != null)
 }
 
+function calcDiscount(subtotal, voucher) {
+  if (!voucher) return 0
+  const minSubtotal = Number(voucher.minSubtotal || 0)
+  if (subtotal < minSubtotal) return 0
+
+  if (voucher.type === 'percent') {
+    return Math.round((subtotal * Number(voucher.value || 0)) / 100)
+  }
+  if (voucher.type === 'fixed') {
+    return Math.min(subtotal, Number(voucher.value || 0))
+  }
+  return 0
+}
+
 export default function Checkout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
-  const { cart, pricing, mergeServerOrder, clearCart } = useShop()
+  const { cart, vouchers, mergeServerOrder, clearCart, setVoucherCode, applyVoucher } = useShop()
 
   /** Luôn chuẩn hoá (trước đây giỏ hàng gửi thẳng cart.items → shoeSize lệ kiểu gây lỗi API). */
   const normalizedLines = useMemo(() => {
@@ -81,13 +95,56 @@ export default function Checkout() {
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [voucherFeedback, setVoucherFeedback] = useState({ type: '', message: '' })
 
   const totals = useMemo(() => {
     const subtotal = lines.reduce((s, it) => s + it.price * it.quantity, 0)
-    const discount = isBuyNow ? 0 : pricing.discount
+    const discount = calcDiscount(subtotal, cart.voucher)
     const total = Math.max(0, subtotal - discount)
     return { subtotal, discount, total }
-  }, [lines, pricing.discount, isBuyNow])
+  }, [lines, cart.voucher])
+
+  function handleApplyVoucher() {
+    const rawCode = String(cart.voucherCode || '').trim()
+    if (!rawCode) {
+      setVoucherFeedback({
+        type: 'error',
+        message: `Bạn chưa nhập mã voucher. Tổng giữ nguyên: ${formatPrice(totals.total)}.`,
+      })
+      return
+    }
+
+    const normalizedCode = rawCode.toUpperCase()
+    const voucher = (vouchers || []).find((v) => String(v.code || '').toUpperCase() === normalizedCode) || null
+    const nextDiscount = calcDiscount(totals.subtotal, voucher)
+    const nextTotal = Math.max(0, totals.subtotal - nextDiscount)
+
+    applyVoucher(normalizedCode)
+
+    if (!voucher) {
+      setVoucherFeedback({
+        type: 'error',
+        message: `Mã ${normalizedCode} không hợp lệ. Giảm giá: ${formatPrice(0)}. Tổng giữ nguyên: ${formatPrice(nextTotal)}.`,
+      })
+      return
+    }
+
+    if (nextDiscount <= 0) {
+      const minSubtotal = Number(voucher.minSubtotal || 0)
+      setVoucherFeedback({
+        type: 'error',
+        message: `Mã ${voucher.code} chưa đủ điều kiện áp dụng (đơn tối thiểu ${formatPrice(minSubtotal)}). Giảm giá: ${formatPrice(
+          0,
+        )}. Tổng giữ nguyên: ${formatPrice(nextTotal)}.`,
+      })
+      return
+    }
+
+    setVoucherFeedback({
+      type: 'success',
+      message: `Áp dụng ${voucher.code} thành công. Giảm: ${formatPrice(nextDiscount)}. Tổng sau áp mã: ${formatPrice(nextTotal)}.`,
+    })
+  }
 
   async function placeOrder(e) {
     e.preventDefault()
@@ -127,7 +184,7 @@ export default function Checkout() {
         note,
       }
 
-      if (!isBuyNow && cart.voucher?.code) {
+      if (cart.voucher?.code) {
         payload.voucherCode = cart.voucher.code
       }
 
@@ -313,9 +370,29 @@ export default function Checkout() {
               <strong>{formatPrice(totals.total)}</strong>
             </div>
 
-            {!isBuyNow && cart.voucher ? (
-              <div className="alert alert-success" style={{ marginTop: 12 }}>
-                Voucher: <strong>{cart.voucher.code}</strong>
+            <div className="voucher-box" style={{ marginTop: 10 }}>
+              <label className="muted small">Voucher</label>
+              <div className="voucher-row">
+                <input
+                  placeholder="Nhập mã (ví dụ WELCOME10)"
+                  value={cart.voucherCode || ''}
+                  onChange={(e) => {
+                    setVoucherCode(e.target.value)
+                    setVoucherFeedback({ type: '', message: '' })
+                  }}
+                />
+                <button type="button" className="btn btn-secondary btn-sm" onClick={handleApplyVoucher}>
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+
+            {voucherFeedback.message ? (
+              <div
+                className={voucherFeedback.type === 'success' ? 'alert alert-success' : 'alert alert-error'}
+                style={{ marginTop: 12, marginBottom: 0 }}
+              >
+                {voucherFeedback.message}
               </div>
             ) : null}
           </aside>
