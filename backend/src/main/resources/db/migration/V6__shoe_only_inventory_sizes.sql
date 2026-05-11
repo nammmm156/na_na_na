@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 -- Drop non-shoe / electronics catalog items (broader than V5)
 DELETE FROM product
 WHERE category IN (
@@ -34,7 +34,7 @@ SET stock_quantity = COALESCE((
     FROM product_size_stock s
     WHERE s.product_id = p.id
 ), 0);
-=======
+
 -- Drop non-shoe / electronics catalog items (broader than V5).
 -- Must delete from order_line_items first (no ON DELETE CASCADE on product FK).
 
@@ -90,4 +90,4 @@ SET stock_quantity = COALESCE((
     FROM product_size_stock s
     WHERE s.product_id = p.id
 ), 0);
->>>>>>> 19acb3ac5322d065b335f5bf5e415f3f22faf2f8
+
