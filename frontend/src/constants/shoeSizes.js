@@ -12,3 +12,12 @@ export function parseAllowedShoeSize(v) {
   const r = Math.round(n)
   return SHOE_SIZES.includes(r) ? r : null
 }
+
+/** Stock for one EU size from API map (keys may be number or string). Returns null if unknown. */
+export function stockQuantityForSize(sizeQuantities, size) {
+  if (!sizeQuantities || typeof sizeQuantities !== 'object') return null
+  const raw = sizeQuantities[size] ?? sizeQuantities[String(size)]
+  if (raw == null) return null
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : null
+}

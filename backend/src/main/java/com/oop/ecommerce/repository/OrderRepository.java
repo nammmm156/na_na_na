@@ -39,4 +39,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             + "WHERE o.status = 'PAID' "
             + "GROUP BY COALESCE(p.category, 'Khác') ORDER BY rev DESC", nativeQuery = true)
     List<Object[]> sumPaidLineRevenueByCategory();
+
+    /** User has at least one PAID order line for this product (completed purchase). */
+    @Query("SELECT COUNT(o) FROM Order o JOIN o.lineItems li WHERE o.user.id = :userId AND li.productId = :productId AND o.status = :status")
+    long countPaidOrdersContainingProduct(
+            @Param("userId") Long userId,
+            @Param("productId") Long productId,
+            @Param("status") OrderStatus status);
 }

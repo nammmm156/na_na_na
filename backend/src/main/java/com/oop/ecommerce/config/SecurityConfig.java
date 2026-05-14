@@ -39,9 +39,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/payment/webhook").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/", "/api").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/test/auth").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/products/statistics").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll() // publicly view products
+                .requestMatchers(HttpMethod.GET, "/api/reviews/eligibility/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                 .anyRequest().authenticated() // force login for everything else (buying, creating products etc.)
             )

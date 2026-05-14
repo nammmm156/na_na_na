@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
-import { fetchProductReviews, postReview } from '../api/reviews.js'
+import { fetchProductReviews, postReview, fetchReviewEligibility } from '../api/reviews.js'
 import ShoeSizePicker from '../components/ShoeSizePicker.jsx'
 import { parseAllowedShoeSize } from '../constants/shoeSizes.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -19,7 +19,7 @@ function parseReviewComment(comment) {
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAuthenticated, isAdmin, user } = useAuth()
+  const { isAuthenticated, isAdmin } = useAuth()
   const { addToCart } = useShop()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -28,6 +28,8 @@ export default function ProductDetail() {
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', body: '' })
   const [reviewMsg, setReviewMsg] = useState('')
   const [reviewError, setReviewError] = useState('')
+  const [reviewEligibility, setReviewEligibility] = useState(null)
+  const [reviewEligibilityLoading, setReviewEligibilityLoading] = useState(false)
   const [shoeSize, setShoeSize] = useState(null)
   const [sizeError, setSizeError] = useState('')
 
@@ -80,6 +82,29 @@ export default function ProductDetail() {
       mounted = false
     }
   }, [id])
+
+  useEffect(() => {
+    if (!isAuthenticated || isAdmin || !id) {
+      setReviewEligibility(null)
+      setReviewEligibilityLoading(false)
+      return undefined
+    }
+    let mounted = true
+    setReviewEligibilityLoading(true)
+    fetchReviewEligibility(id)
+      .then((dto) => {
+        if (mounted) setReviewEligibility(dto)
+      })
+      .catch(() => {
+        if (mounted) setReviewEligibility({ eligible: false, message: 'Không kiểm tra được quyền đánh giá.' })
+      })
+      .finally(() => {
+        if (mounted) setReviewEligibilityLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [id, isAuthenticated, isAdmin])
   const avgRating = useMemo(() => {
     if (!reviews.length) return 0
     return reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
@@ -129,6 +154,7 @@ export default function ProductDetail() {
                   setSizeError('')
                 }}
                 labelledById={`detail-size-${id}`}
+                sizeQuantities={product.sizeQuantities}
               />
               {sizeError ? (
                 <div className="alert alert-error" style={{ marginTop: 10 }}>
@@ -215,7 +241,22 @@ export default function ProductDetail() {
           </div>
         ) : null}
 
-        {isAuthenticated && !isAdmin ? (
+        {!isAuthenticated ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            <Link to="/login" className="text-link">
+              Đăng nhập
+            </Link>{' '}
+            để viết đánh giá.
+          </p>
+        ) : isAdmin ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Tài khoản quản trị không gửi đánh giá từ trang sản phẩm.
+          </p>
+        ) : reviewEligibilityLoading || reviewEligibility == null ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Đang kiểm tra quyền đánh giá…
+          </p>
+        ) : reviewEligibility.eligible ? (
           <form
             className="form-grid"
             style={{ marginTop: 12 }}
@@ -236,6 +277,12 @@ export default function ProductDetail() {
                 setReviewMsg('Cảm ơn bạn đã đánh giá!')
                 const list = await fetchProductReviews(id)
                 setReviews(Array.isArray(list) ? list : [])
+                try {
+                  const nextEl = await fetchReviewEligibility(id)
+                  setReviewEligibility(nextEl)
+                } catch {
+                  setReviewEligibility({ eligible: false, message: 'Bạn đã đánh giá sản phẩm này rồi.' })
+                }
               } catch (err) {
                 setReviewError(err instanceof Error ? err.message : 'Gửi đánh giá thất bại')
               }
@@ -275,10 +322,7 @@ export default function ProductDetail() {
           </form>
         ) : (
           <p className="muted" style={{ marginTop: 12 }}>
-            <Link to="/login" className="text-link">
-              Đăng nhập
-            </Link>{' '}
-            để viết đánh giá.
+            {reviewEligibility.message || 'Bạn không thể viết đánh giá cho sản phẩm này.'}
           </p>
         )}
 

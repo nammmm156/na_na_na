@@ -1,6 +1,7 @@
 package com.oop.ecommerce.controller;
 
 import com.oop.ecommerce.dto.ReviewCreateRequest;
+import com.oop.ecommerce.dto.ReviewEligibilityDto;
 import com.oop.ecommerce.dto.ReviewResponseDto;
 import com.oop.ecommerce.security.CustomUserDetails;
 import com.oop.ecommerce.service.ReviewService;
@@ -24,6 +25,24 @@ import java.util.List;
 public class ReviewController {
 
     private final ReviewService reviewService;
+
+    @GetMapping("/eligibility/{productId}")
+    public ResponseEntity<?> reviewEligibility(
+            @PathVariable Long productId,
+            Authentication authentication
+    ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+        CustomUserDetails details = (CustomUserDetails) authentication.getPrincipal();
+        Long userId = details.getUser().getId();
+        try {
+            ReviewEligibilityDto dto = reviewService.eligibilityForUser(userId, productId);
+            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 
     @GetMapping("/{productId}")
     public List<ReviewResponseDto> getReviewsForProduct(@PathVariable Long productId) {

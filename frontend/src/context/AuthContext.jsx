@@ -3,6 +3,15 @@ import { apiFetch, getToken, setToken } from '../api/client.js'
 
 const AuthContext = createContext(null)
 
+async function readApiErrorMessage(res, fallbackMessage) {
+  const text = await res.text()
+  const statusGroup = Math.floor(res.status / 100)
+  if (statusGroup >= 5 || /<html|bad gateway|nginx/i.test(text)) {
+    return 'He thong dang tam thoi gian doan. Vui long thu lai sau.'
+  }
+  return text || fallbackMessage
+}
+
 function readStoredUser() {
   if (!getToken()) {
     localStorage.removeItem('quanlyshop_user')
@@ -33,8 +42,7 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ username, password }),
     })
     if (!res.ok) {
-      const text = await res.text()
-      throw new Error(text || 'Đăng nhập thất bại')
+      throw new Error(await readApiErrorMessage(res, 'Dang nhap that bai'))
     }
     const data = await res.json()
     setToken(data.token)
@@ -50,8 +58,7 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ idToken }),
     })
     if (!res.ok) {
-      const text = await res.text()
-      throw new Error(text || 'Đăng nhập Google thất bại')
+      throw new Error(await readApiErrorMessage(res, 'Dang nhap Google that bai'))
     }
     const data = await res.json()
     setToken(data.token)
@@ -67,7 +74,7 @@ export function AuthProvider({ children }) {
       body: JSON.stringify(payload),
     })
     const text = await res.text()
-    if (!res.ok) throw new Error(text || 'Đăng ký thất bại')
+    if (!res.ok) throw new Error(text || 'Dang ky that bai')
     return text
   }, [])
 

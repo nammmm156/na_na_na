@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { postOrder } from '../api/orders.js'
 import { postPayosCreateLink } from '../api/payment.js'
-import { SHOE_SIZES, parseAllowedShoeSize } from '../constants/shoeSizes.js'
+import { apiFetch } from '../api/client.js'
+import { SHOE_SIZES, parseAllowedShoeSize, stockQuantityForSize } from '../constants/shoeSizes.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useShop } from '../context/ShopContext.jsx'
 import { formatPrice } from '../utils/format.js'
@@ -71,10 +72,44 @@ export default function Checkout() {
   )
 
   const [sizeByIndex, setSizeByIndex] = useState({})
+  const [stocksByProductId, setStocksByProductId] = useState({})
 
   useEffect(() => {
     setSizeByIndex({})
   }, [normalizedLines])
+
+  const productIdsForStock = useMemo(
+    () => [...new Set(baseLines.map((l) => l.productId).filter((pid) => pid != null))],
+    [baseLines],
+  )
+
+  useEffect(() => {
+    if (!productIdsForStock.length) {
+      setStocksByProductId({})
+      return undefined
+    }
+    let cancelled = false
+    ;(async () => {
+      const entries = await Promise.all(
+        productIdsForStock.map(async (pid) => {
+          try {
+            const res = await apiFetch(`/api/products/${pid}`)
+            if (!res.ok) return [pid, null]
+            const data = await res.json()
+            return [pid, data.sizeQuantities && typeof data.sizeQuantities === 'object' ? data.sizeQuantities : {}]
+          } catch {
+            return [pid, null]
+          }
+        }),
+      )
+      if (!cancelled) {
+        setStocksByProductId(Object.fromEntries(entries))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [productIdsForStock])
 
   const lines = useMemo(
     () =>
@@ -340,11 +375,15 @@ export default function Checkout() {
                           }}
                         >
                           <option value="">-- Chọn size --</option>
-                          {SHOE_SIZES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
+                          {SHOE_SIZES.map((s) => {
+                            const q = stockQuantityForSize(stocksByProductId[it.productId], s)
+                            const label = q == null ? String(s) : `${s} (còn ${q})`
+                            return (
+                              <option key={s} value={s}>
+                                {label}
+                              </option>
+                            )
+                          })}
                         </select>
                       </label>
                       <div className="muted small">

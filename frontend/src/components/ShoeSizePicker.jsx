@@ -1,6 +1,11 @@
-import { SHOE_SIZES } from '../constants/shoeSizes.js'
+import { SHOE_SIZES, stockQuantityForSize } from '../constants/shoeSizes.js'
 
-export default function ShoeSizePicker({ value, onChange, labelledById, className }) {
+function formatSizeOptionLabel(size, qty) {
+  if (qty == null) return String(size)
+  return `${size} (còn ${qty})`
+}
+
+export default function ShoeSizePicker({ value, onChange, labelledById, className, sizeQuantities }) {
   const selectValue =
     value != null && SHOE_SIZES.includes(Number(value)) ? String(Number(value)) : ''
 
@@ -22,7 +27,7 @@ export default function ShoeSizePicker({ value, onChange, labelledById, classNam
           <option value="">-- Chọn size --</option>
           {SHOE_SIZES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {formatSizeOptionLabel(s, stockQuantityForSize(sizeQuantities, s))}
             </option>
           ))}
         </select>

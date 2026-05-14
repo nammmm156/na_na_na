@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { apiFetch } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { SHOE_SIZES } from '../constants/shoeSizes.js'
+import HeroBanner from '../components/HeroBanner.jsx'
 
 const emptyForm = {
   name: '',
@@ -166,6 +167,7 @@ export default function Products() {
 
   return (
     <div className="products-page">
+      <HeroBanner />
       <header className="page-header">
         <div>
           <h1>Sản phẩm</h1>
