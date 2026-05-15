@@ -1,12 +1,65 @@
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useShop } from '../context/ShopContext.jsx'
 import { formatPrice } from '../utils/format.js'
 
 export default function Cart() {
   const navigate = useNavigate()
-  const { cart, pricing, setQuantity, removeFromCart, setVoucherCode, applyVoucher } = useShop()
+  const { cart, pricing, vouchers, setQuantity, removeFromCart, setVoucherCode, applyVoucher } = useShop()
+  const [voucherFeedback, setVoucherFeedback] = useState({ type: '', message: '' })
 
   const items = cart.items || []
+  const subtotal = useMemo(
+    () => items.reduce((sum, it) => sum + Number(it.price || 0) * Number(it.quantity || 0), 0),
+    [items],
+  )
+
+  function calcDiscountForVoucher(voucher) {
+    if (!voucher) return 0
+    if (subtotal < Number(voucher.minSubtotal || 0)) return 0
+    if (voucher.type === 'percent') return Math.round((subtotal * Number(voucher.value || 0)) / 100)
+    if (voucher.type === 'fixed') return Math.min(subtotal, Number(voucher.value || 0))
+    return 0
+  }
+
+  function handleApplyVoucher() {
+    const code = String(cart.voucherCode || '').trim().toUpperCase()
+    if (!code) {
+      setVoucherFeedback({
+        type: 'error',
+        message: `Bạn chưa nhập mã voucher. Tổng giữ nguyên: ${formatPrice(pricing.total)}.`,
+      })
+      return
+    }
+
+    const voucher = (vouchers || []).find((v) => String(v.code || '').toUpperCase() === code) || null
+    const discount = calcDiscountForVoucher(voucher)
+    const nextTotal = Math.max(0, subtotal - discount)
+    applyVoucher(code)
+
+    if (!voucher) {
+      setVoucherFeedback({
+        type: 'error',
+        message: `Mã ${code} không hợp lệ. Giảm giá: ${formatPrice(0)}. Tổng giữ nguyên: ${formatPrice(nextTotal)}.`,
+      })
+      return
+    }
+
+    if (discount <= 0) {
+      setVoucherFeedback({
+        type: 'error',
+        message: `Mã ${voucher.code} chưa đủ điều kiện (đơn tối thiểu ${formatPrice(
+          voucher.minSubtotal || 0,
+        )}). Giảm giá: ${formatPrice(0)}. Tổng giữ nguyên: ${formatPrice(nextTotal)}.`,
+      })
+      return
+    }
+
+    setVoucherFeedback({
+      type: 'success',
+      message: `Áp dụng ${voucher.code} thành công. Giảm: ${formatPrice(discount)}. Tổng sau giảm: ${formatPrice(nextTotal)}.`,
+    })
+  }
 
   return (
     <section className="cart-page">
@@ -113,19 +166,21 @@ export default function Cart() {
                 <input
                   placeholder="Nhập mã (ví dụ WELCOME10)"
                   value={cart.voucherCode || ''}
-                  onChange={(e) => setVoucherCode(e.target.value)}
+                  onChange={(e) => {
+                    setVoucherCode(e.target.value)
+                    setVoucherFeedback({ type: '', message: '' })
+                  }}
                 />
-                <button type="button" className="btn btn-secondary btn-sm" onClick={applyVoucher}>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={handleApplyVoucher}>
                   Áp dụng
                 </button>
               </div>
-              {cart.voucher ? (
-                <div className="alert alert-success" style={{ marginTop: 10 }}>
-                  Đã áp dụng <strong>{cart.voucher.code}</strong>
-                </div>
-              ) : cart.voucherCode ? (
-                <div className="alert" style={{ marginTop: 10, border: '1px solid rgba(34,50,87,0.5)' }}>
-                  Chưa áp dụng voucher. Bấm “Áp dụng” để kiểm tra.
+              {voucherFeedback.message ? (
+                <div
+                  className={voucherFeedback.type === 'success' ? 'alert alert-success' : 'alert alert-error'}
+                  style={{ marginTop: 10, marginBottom: 0 }}
+                >
+                  {voucherFeedback.message}
                 </div>
               ) : null}
             </div>

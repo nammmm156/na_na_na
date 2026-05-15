@@ -27,7 +27,7 @@ export default function Vouchers() {
             value={cart.voucherCode || ''}
             onChange={(e) => setVoucherCode(e.target.value)}
           />
-          <button type="button" className="btn btn-primary btn-sm" onClick={applyVoucher}>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => applyVoucher(cart.voucherCode)}>
             Áp dụng
           </button>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate('/cart')}>
@@ -38,12 +38,6 @@ export default function Vouchers() {
           Tạm tính: <strong>{pricing.subtotalText}</strong> · Giảm: <strong>{pricing.discountText}</strong> · Tổng:{' '}
           <strong>{pricing.totalText}</strong>
         </div>
-
-        {cart.voucher ? (
-          <div className="alert alert-success" style={{ marginTop: 10 }}>
-            Đã áp dụng <strong>{cart.voucher.code}</strong>
-          </div>
-        ) : null}
       </article>
 
       <div className="vouchers-grid" style={{ marginTop: 14 }}>
@@ -63,7 +57,7 @@ export default function Vouchers() {
               className="btn btn-secondary btn-sm"
               onClick={() => {
                 setVoucherCode(v.code)
-                applyVoucher()
+                applyVoucher(v.code)
               }}
             >
               Dùng mã này
